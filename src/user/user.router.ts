@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import UserController from './user.controller'
 
 const router = () => {
     const servicePaths = Router()
@@ -7,16 +8,6 @@ const router = () => {
     servicePaths.get(
         '/user/:id',
         franchiseController.get.bind(franchiseController)
-    )
-
-    servicePaths.post(
-        '/user/create',
-        franchiseController.list.bind(franchiseController)
-    )
-
-    servicePaths.post(
-        '/user/login',
-        franchiseController.create.bind(franchiseController)
     )
 
     return servicePaths

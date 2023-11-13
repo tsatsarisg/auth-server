@@ -1,7 +1,8 @@
 import { Collection, ObjectId } from 'mongodb'
-import User from './user.model'
+import { buildUser } from './user.model'
+import { UserRepository } from '../ts/interfaces'
 
-export default class UserMongoRepository {
+export default class UserMongoRepository implements UserRepository {
     private collection: Collection
 
     constructor(props: any) {
@@ -12,7 +13,18 @@ export default class UserMongoRepository {
         const user = await this.collection.findOne({ _id: new ObjectId(id) })
         if (!user) throw new Error('User not found')
 
-        return new User({
+        return buildUser({
+            id: user._id.toString(),
+            email: user.email,
+            password: user.password,
+        })
+    }
+
+    async findByEmail(email: string) {
+        const user = await this.collection.findOne({ email })
+        if (!user) throw new Error('User not found')
+
+        return buildUser({
             id: user._id.toString(),
             email: user.email,
             password: user.password,
@@ -23,7 +35,7 @@ export default class UserMongoRepository {
         const result = await this.collection.insertOne({ email, password })
         if (!result.insertedId) throw new Error('User creation error')
 
-        return new User({
+        return buildUser({
             id: result.insertedId.toString(),
             email,
             password,
