@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth_network_dev
+
+  backend:
+    build:
+      context: ../.. # relative to infra/docker -> repo root
+      dockerfile: infra/docker/Dockerfile.dev
+      target: dev
+    image: auth-server-dev
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://root:example@mongo:27017/auth?authSource=admin
+      - CHOKIDAR_USEPOLLING=true # helps file watchers inside Docker on some platforms
+    ports:
+      - "3000:3000"
+    # Mount project root into /app so changes on host are visible inside container.
+    volumes:
+      - ../..:/app:delegated
+      - /app/node_modules # named anonymous volume to avoid host node_modules collisions
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - auth_network_dev
+
+networks:
+  auth_network_dev:
+    driver: bridge
+
+volumes:
+  mongo-data:

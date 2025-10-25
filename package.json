@@ -1,0 +1,18 @@
+{
+  "name": "auth-server-root",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "auth-server"
+  ],
+  "scripts": {
+    "install": "pnpm install",
+    "dev": "pnpm --filter auth-server run start:dev",
+    "start": "pnpm --filter auth-server run start:prod",
+    "build": "pnpm --filter auth-server run build",
+    "test": "pnpm --filter auth-server run test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
