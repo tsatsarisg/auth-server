@@ -5,6 +5,7 @@ const envSchema = z.object({
   MONGO_URI: z.string().min(1),
   POSTGRES_URI: z.string().min(1),
   JWT_SECRET: z.string().min(8),
+  ENCRYPTION_KEY_BASE64: z.string().min(1),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
