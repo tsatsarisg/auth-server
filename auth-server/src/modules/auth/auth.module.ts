@@ -1,11 +1,20 @@
 import { Module } from '@nestjs/common';
-import { PASSWORD_HASHER } from './domain/password.hasher.interface';
-import NodePasswordHasher from './infrastructure/password.hasher';
+import { JwtModule } from '@nestjs/jwt';
+
 import { UserModule } from '../user/user.module';
+import ENVS from '../../config/env';
+import AuthService from './application/auth.service';
+import { AuthController } from './presentation/auth.controller';
 
 @Module({
-  imports: [UserModule],
-  providers: [{ provide: PASSWORD_HASHER, useClass: NodePasswordHasher }],
-  exports: [PASSWORD_HASHER],
+  imports: [
+    UserModule,
+    JwtModule.register({
+      secret: ENVS.JWT_SECRET,
+      signOptions: {},
+    }),
+  ],
+  providers: [AuthService],
+  controllers: [AuthController],
 })
 export class AuthModule {}

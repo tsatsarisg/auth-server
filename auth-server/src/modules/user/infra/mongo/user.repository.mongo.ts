@@ -49,4 +49,67 @@ export default class UserMongoRepository implements UserRepository {
   async delete(id: string): Promise<void> {
     await this.userModel.findByIdAndDelete(id).exec();
   }
+
+  async storeRefreshToken(
+    userId: string,
+    token: { jti: string; hash: string; expiresAt: Date },
+  ): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $push: {
+            refreshTokens: {
+              jti: token.jti,
+              hash: token.hash,
+              expiresAt: token.expiresAt,
+              revoked: false,
+              createdAt: new Date(),
+            },
+          },
+        },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async findRefreshTokenByJti(jti: string): Promise<{
+    userId: string;
+    jti: string;
+    hash: string;
+    expiresAt: Date;
+    revoked?: boolean;
+  } | null> {
+    const doc = await this.userModel
+      .findOne({ 'refreshTokens.jti': jti }, { 'refreshTokens.$': 1 })
+      .exec();
+    if (!doc || !doc.refreshTokens || doc.refreshTokens.length === 0)
+      return null;
+    const rt = doc.refreshTokens[0];
+    return {
+      userId: String(doc._id),
+      jti: rt.jti,
+      hash: rt.hash,
+      expiresAt: rt.expiresAt,
+      revoked: rt.revoked,
+    };
+  }
+
+  async revokeRefreshToken(jti: string): Promise<void> {
+    await this.userModel
+      .updateOne(
+        { 'refreshTokens.jti': jti },
+        { $set: { 'refreshTokens.$.revoked': true } },
+      )
+      .exec();
+  }
+
+  async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
+    await this.userModel
+      .updateOne(
+        { _id: userId },
+        { $set: { 'refreshTokens.$[].revoked': true } },
+      )
+      .exec();
+  }
 }

@@ -12,6 +12,15 @@ export class UserDocument {
 
   @Prop()
   passwordHash: string;
+
+  @Prop({ type: Array, default: [] })
+  refreshTokens?: Array<{
+    jti: string;
+    hash: string;
+    expiresAt: Date;
+    revoked?: boolean;
+    createdAt?: Date;
+  }>;
 }
 
 export type UserMongoDocument = UserDocument & Document & { _id: string };
