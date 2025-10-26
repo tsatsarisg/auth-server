@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mongo:
     image: mongo:7
@@ -21,23 +19,20 @@ services:
 
   backend:
     build:
-      context: ../.. # relative to infra/docker -> repo root
+      context: ../..
       dockerfile: infra/docker/Dockerfile.dev
-      target: dev
     image: auth-server-dev
+    env_file:
+      - ../envs/.env.dev
     environment:
-      - NODE_ENV=development
-      - MONGO_URI=mongodb://root:example@mongo:27017/auth?authSource=admin
-      - CHOKIDAR_USEPOLLING=true # helps file watchers inside Docker on some platforms
+      - CHOKIDAR_USEPOLLING=true
     ports:
       - "3000:3000"
-    # Mount project root into /app so changes on host are visible inside container.
     volumes:
       - ../..:/app:delegated
-      - /app/node_modules # named anonymous volume to avoid host node_modules collisions
+      - /app/node_modules
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
     networks:
       - auth_network_dev
 

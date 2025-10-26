@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy workspace metadata & lockfile so installs are deterministic
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY auth-server/package.json ./auth-server/package.json
+
+RUN pnpm install --frozen-lockfile
+
+EXPOSE 3000
+
+# Default to running the dev watcher for the auth-server workspace package
+CMD ["pnpm", "--filter=auth-server", "run", "start:dev"]

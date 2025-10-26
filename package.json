@@ -6,11 +6,8 @@
     "auth-server"
   ],
   "scripts": {
-    "install": "pnpm install",
-    "dev": "pnpm --filter auth-server run start:dev",
-    "start": "pnpm --filter auth-server run start:prod",
-    "build": "pnpm --filter auth-server run build",
-    "test": "pnpm --filter auth-server run test"
+    "dev": "docker compose -f infra/docker/docker-compose.dev.yml up --build",
+    "dev:down": "docker compose -f infra/docker/docker-compose.dev.yml down"
   },
   "engines": {
     "node": ">=20"
