@@ -6,13 +6,46 @@ import {
   UnauthorizedException,
   Req,
   UseGuards,
+  ConflictException,
 } from '@nestjs/common';
 import AuthService from '../application/auth.service';
+import { UserService } from '../../user/application/user.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
+
+  @Post('register')
+  async register(
+    @Body() body: { email: string; password: string },
+  ): Promise<{ message: string }> {
+    const { email, password } = body;
+
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    if (password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+
+    // Check if user already exists
+    const existingUser = await this.userService.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    try {
+      await this.userService.create({ email, password });
+      return { message: 'User registered successfully' };
+    } catch (e: any) {
+      throw new BadRequestException('Failed to register user');
+    }
+  }
 
   @Post('login')
   async login(

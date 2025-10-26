@@ -17,6 +17,6 @@ import NodePasswordHasher from './infra/password.hasher';
     { provide: PASSWORD_HASHER, useClass: NodePasswordHasher },
     UserService,
   ],
-  exports: [],
+  exports: [UserService],
 })
 export class UserModule {}
