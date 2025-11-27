@@ -1,9 +1,9 @@
 import {
   pgTable,
   uuid,
-  varchar,
   timestamp,
   boolean,
+  text,
 } from 'drizzle-orm/pg-core';
 import { users } from './user.schema';
 
@@ -12,8 +12,8 @@ export const refreshTokens = pgTable('refresh_tokens', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  jti: varchar('jti', { length: 255 }).notNull().unique(),
-  hash: varchar('hash', { length: 255 }).notNull(),
+  jti: text('jti').notNull().unique(),
+  hash: text('hash').notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   revoked: boolean('revoked').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
