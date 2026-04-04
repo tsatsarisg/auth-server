@@ -4,11 +4,11 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import AuthService from '../../application/auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly authService: AuthService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
@@ -24,10 +24,18 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.authService.verifyAccessToken(token);
+
+      if (payload.type !== 'access') {
+        throw new UnauthorizedException(
+          'Invalid token type: expected access token',
+        );
+      }
+
       request.user = payload;
       return true;
     } catch (e: any) {
+      if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Invalid or expired access token');
     }
   }

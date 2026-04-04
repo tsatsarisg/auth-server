@@ -5,33 +5,48 @@ import {
   BadRequestException,
   UnauthorizedException,
   Req,
+  Res,
   UseGuards,
+  UsePipes,
   ConflictException,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import AuthService from '../application/auth.service';
 import { UserService } from '../../user/application/user.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  RegisterSchema,
+  type RegisterDto,
+  LoginSchema,
+  type LoginDto,
+} from '../../user/application/dtos/register.dto';
+
+const REFRESH_COOKIE_NAME = 'refresh_token';
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'strict' as const,
+  path: '/auth',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UserService,
+    @InjectPinoLogger(AuthController.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   @Post('register')
-  async register(
-    @Body() body: { email: string; password: string },
-  ): Promise<{ message: string }> {
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @UsePipes(new ZodValidationPipe(RegisterSchema))
+  async register(@Body() body: RegisterDto): Promise<{ message: string }> {
     const { email, password } = body;
-
-    if (!email || !password) {
-      throw new BadRequestException('Email and password are required');
-    }
-
-    if (password.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters');
-    }
 
     // Check if user already exists
     const existingUser = await this.userService.findByEmail(email);
@@ -41,6 +56,7 @@ export class AuthController {
 
     try {
       await this.userService.create({ email, password });
+      this.logger.info({ event: 'registration', email });
       return { message: 'User registered successfully' };
     } catch (e: any) {
       throw new BadRequestException('Failed to register user');
@@ -48,13 +64,13 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @UsePipes(new ZodValidationPipe(LoginSchema))
   async login(
-    @Body() body: { email: string; password: string },
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ accessToken: string }> {
     const { email, password } = body;
-    if (!email || !password) {
-      throw new BadRequestException('Email and password are required');
-    }
 
     const result = await this.authService.login(email, password);
 
@@ -69,14 +85,19 @@ export class AuthController {
       throw new UnauthorizedException('Login failed');
     }
 
-    return result.value;
+    const { accessToken, refreshToken } = result.value;
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
+
+    return { accessToken };
   }
 
   @Post('refresh')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   async refresh(
-    @Body() body: { refreshToken: string },
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const { refreshToken } = body;
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ accessToken: string }> {
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
     }
@@ -87,12 +108,18 @@ export class AuthController {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    return result.value;
+    const { accessToken, refreshToken: newRefreshToken } = result.value;
+    res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, REFRESH_COOKIE_OPTIONS);
+
+    return { accessToken };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req: any): Promise<{ message: string }> {
+  async logout(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
     const userId = req.user?.sub;
     if (!userId) {
       throw new UnauthorizedException('User not found in token');
@@ -103,6 +130,13 @@ export class AuthController {
     if (result.isErr()) {
       throw new UnauthorizedException('Logout failed');
     }
+
+    res.clearCookie(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/auth',
+    });
 
     return { message: 'Logged out successfully' };
   }

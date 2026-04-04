@@ -9,3 +9,10 @@ export const RegisterSchema = z.object({
 });
 
 export type RegisterDto = z.infer<typeof RegisterSchema>;
+
+export const LoginSchema = z.object({
+  email: z.email({ message: 'Invalid email' }),
+  password: z.string().min(1, { message: 'Password is required' }),
+});
+
+export type LoginDto = z.infer<typeof LoginSchema>;

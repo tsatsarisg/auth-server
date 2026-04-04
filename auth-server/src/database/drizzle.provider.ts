@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import * as schema from '../modules/user/infra/postgres/schema';
 import ENVS from '../config/env';
 
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: ENVS.POSTGRES_URI,
 });
 

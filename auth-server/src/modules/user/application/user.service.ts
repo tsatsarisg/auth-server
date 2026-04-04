@@ -35,40 +35,4 @@ export class UserService {
   findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findByEmail(email);
   }
-
-  async storeRefreshToken(
-    userId: string,
-    refreshToken: string,
-    jti: string,
-    expiresAt: Date,
-  ): Promise<void> {
-    const hash = await this.hasher.hash(refreshToken);
-    return this.userRepository.storeRefreshToken(userId, {
-      jti,
-      hash,
-      expiresAt,
-    });
-  }
-
-  async validateRefreshToken(
-    jti: string,
-    refreshToken: string,
-  ): Promise<{ valid: boolean; userId?: string }> {
-    const stored = await this.userRepository.findRefreshTokenByJti(jti);
-    if (!stored) return { valid: false };
-    if (stored.revoked) return { valid: false };
-    if (new Date(stored.expiresAt) < new Date()) return { valid: false };
-
-    const matches = await this.hasher.compare(refreshToken, stored.hash);
-    if (!matches) return { valid: false, userId: stored.userId };
-    return { valid: true, userId: stored.userId };
-  }
-
-  async revokeRefreshToken(jti: string): Promise<void> {
-    return this.userRepository.revokeRefreshToken(jti);
-  }
-
-  async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
-    return this.userRepository.revokeAllRefreshTokensForUser(userId);
-  }
 }

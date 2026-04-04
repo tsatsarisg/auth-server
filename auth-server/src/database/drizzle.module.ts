@@ -1,5 +1,5 @@
-import { Module, Global } from '@nestjs/common';
-import { db, DRIZZLE_DB } from './drizzle.provider';
+import { Module, Global, OnModuleDestroy } from '@nestjs/common';
+import { db, pool, DRIZZLE_DB } from './drizzle.provider';
 
 @Global()
 @Module({
@@ -11,4 +11,8 @@ import { db, DRIZZLE_DB } from './drizzle.provider';
   ],
   exports: [DRIZZLE_DB],
 })
-export class DrizzleModule {}
+export class DrizzleModule implements OnModuleDestroy {
+  async onModuleDestroy(): Promise<void> {
+    await pool.end();
+  }
+}

@@ -3,10 +3,10 @@ import { eq } from 'drizzle-orm';
 import User from '../../domain/user.entity';
 import UserRepository from '../../domain/user.repository.interface';
 import { UserPostgresMapper } from './user.mapper.postgres';
-import { users, refreshTokens } from './schema';
+import { users } from './schema';
 import { DRIZZLE_DB } from '../../../../database/drizzle.provider';
 import type { DrizzleDB } from '../../../../database/drizzle.provider';
-import Encryptor from 'src/modules/encryptor/encryptor';
+import Encryptor from '../../../encryptor/encryptor';
 
 @Injectable()
 export default class UserPostgresRepository implements UserRepository {
@@ -69,56 +69,5 @@ export default class UserPostgresRepository implements UserRepository {
 
   async delete(id: string): Promise<void> {
     await this.db.delete(users).where(eq(users.id, id));
-  }
-
-  async storeRefreshToken(
-    userId: string,
-    token: { jti: string; hash: string; expiresAt: Date },
-  ): Promise<void> {
-    await this.db.insert(refreshTokens).values({
-      userId,
-      jti: token.jti,
-      hash: token.hash,
-      expiresAt: token.expiresAt,
-      revoked: false,
-    });
-  }
-
-  async findRefreshTokenByJti(jti: string): Promise<{
-    userId: string;
-    jti: string;
-    hash: string;
-    expiresAt: Date;
-    revoked?: boolean;
-  } | null> {
-    const result = await this.db
-      .select()
-      .from(refreshTokens)
-      .where(eq(refreshTokens.jti, jti));
-
-    if (result.length === 0) return null;
-
-    const token = result[0];
-    return {
-      userId: token.userId,
-      jti: token.jti,
-      hash: token.hash,
-      expiresAt: token.expiresAt,
-      revoked: token.revoked,
-    };
-  }
-
-  async revokeRefreshToken(jti: string): Promise<void> {
-    await this.db
-      .update(refreshTokens)
-      .set({ revoked: true })
-      .where(eq(refreshTokens.jti, jti));
-  }
-
-  async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
-    await this.db
-      .update(refreshTokens)
-      .set({ revoked: true })
-      .where(eq(refreshTokens.userId, userId));
   }
 }
