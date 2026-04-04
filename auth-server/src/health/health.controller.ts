@@ -1,13 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import {
-  HealthCheck,
-  HealthCheckService,
-  HealthCheckResult,
-} from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService, HealthCheckResult } from '@nestjs/terminus';
 import { HealthIndicatorService } from '@nestjs/terminus';
-import { ENVS } from '../config/env.js';
-
 // Lazily-resolved dependencies to avoid importing unavailable database drivers.
 // Each check function is set from the module factory so that only the active
 // database driver is loaded at runtime.

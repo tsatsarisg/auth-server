@@ -4,10 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { err, ok, Result } from 'neverthrow';
 import { randomUUID } from 'crypto';
 import { ENVS } from '../../config/env.js';
-import {
-  REFRESH_TOKEN_REPOSITORY,
-  type RefreshTokenRepository,
-} from './ports/refresh-token.repository.js';
+import { REFRESH_TOKEN_REPOSITORY, type RefreshTokenRepository } from './ports/refresh-token.repository.js';
 import { AUTH_USER_PORT, type AuthUserPort } from './ports/auth-user.port.js';
 import { hashToken, verifyToken } from './token-hasher.js';
 
@@ -68,10 +65,7 @@ export class AuthService {
     });
   }
 
-  async login(
-    email: string,
-    password: string,
-  ): Promise<Result<TokenPair, AuthError>> {
+  async login(email: string, password: string): Promise<Result<TokenPair, AuthError>> {
     try {
       const user = await this.userPort.findByEmail(email);
       if (!user) {
@@ -140,11 +134,7 @@ export class AuthService {
       if (!jti || !userId) return err({ type: 'invalid_credentials' });
 
       const stored = await this.refreshTokenRepo.findByJti(jti);
-      if (
-        !stored ||
-        stored.revoked ||
-        new Date(stored.expiresAt) < new Date()
-      ) {
+      if (!stored || stored.revoked || new Date(stored.expiresAt) < new Date()) {
         return err({ type: 'invalid_credentials' });
       }
 
@@ -167,9 +157,7 @@ export class AuthService {
         sub: userId,
         email: payload.email,
       });
-      const newRefreshExpiresAt = new Date(
-        Date.now() + 7 * 24 * 60 * 60 * 1000,
-      );
+      const newRefreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       const newRefreshToken = this.signRefreshToken({
         sub: userId,
         jti: newJti,

@@ -3,9 +3,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { LoginFailedEvent } from './login-failed.event.js';
 
 @EventsHandler(LoginFailedEvent)
-export class LoginFailedAuditHandler
-  implements IEventHandler<LoginFailedEvent>
-{
+export class LoginFailedAuditHandler implements IEventHandler<LoginFailedEvent> {
   constructor(
     @InjectPinoLogger(LoginFailedAuditHandler.name)
     private readonly logger: PinoLogger,

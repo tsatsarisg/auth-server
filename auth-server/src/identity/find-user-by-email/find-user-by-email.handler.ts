@@ -4,9 +4,7 @@ import { UserService } from '../shared/identity.service.js';
 import type { User } from '../shared/user.aggregate.js';
 
 @QueryHandler(FindUserByEmailQuery)
-export class FindUserByEmailHandler
-  implements IQueryHandler<FindUserByEmailQuery>
-{
+export class FindUserByEmailHandler implements IQueryHandler<FindUserByEmailQuery> {
   constructor(private readonly userService: UserService) {}
 
   async execute(query: FindUserByEmailQuery): Promise<User | null> {

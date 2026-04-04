@@ -1,5 +1,5 @@
 import { User } from '../../user.aggregate.js';
-import { UserRecord, NewUserRecord } from './schema/user.schema.js';
+import { type UserRecord, type NewUserRecord } from './schema/user.schema.js';
 
 export class UserPostgresMapper {
   static toDomain(record: UserRecord): User {

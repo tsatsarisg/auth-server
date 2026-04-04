@@ -28,12 +28,7 @@ import { UserLoggedOutAuditHandler } from './logout/user-logged-out.audit-handle
 
 const isPostgres = ENVS.DB_PROVIDER === 'postgres';
 
-const CommandHandlers = [
-  RegisterUserHandler,
-  LoginHandler,
-  RefreshTokenHandler,
-  LogoutHandler,
-];
+const CommandHandlers = [RegisterUserHandler, LoginHandler, RefreshTokenHandler, LogoutHandler];
 
 const EventHandlers = [
   UserRegisteredAuditHandler,
@@ -48,17 +43,13 @@ const EventHandlers = [
     CqrsModule,
     IdentityModule,
     JwtModule.register({}),
-    ...(isPostgres
-      ? []
-      : [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])]),
+    ...(isPostgres ? [] : [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])]),
   ],
   providers: [
     AuthService,
     {
       provide: REFRESH_TOKEN_REPOSITORY,
-      useClass: isPostgres
-        ? RefreshTokenPostgresRepository
-        : RefreshTokenMongoRepository,
+      useClass: isPostgres ? RefreshTokenPostgresRepository : RefreshTokenMongoRepository,
     },
     {
       provide: AUTH_USER_PORT,

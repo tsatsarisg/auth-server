@@ -1,4 +1,4 @@
-import { User } from '../../../identity/shared/user.aggregate.js';
+import { type User } from '../../../identity/shared/user.aggregate.js';
 
 export interface AuthUserPort {
   findByEmail(email: string): Promise<User | null>;

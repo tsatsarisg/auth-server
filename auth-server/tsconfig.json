@@ -1,23 +1,41 @@
 {
   "compilerOptions": {
+    // Module system — NestJS 11 supports NodeNext with .js extensions in imports
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
-    "esModuleInterop": true,
     "isolatedModules": true,
+
+    // Language target — Node 18+ supports ES2022 (top-level await, class fields, etc.)
+    "target": "ES2022",
+
+    // Strict type checking — strict:true enables strictNullChecks, noImplicitAny,
+    // strictBindCallApply, strictFunctionTypes, strictPropertyInitialization,
+    // alwaysStrict, useUnknownInCatchVariables, and noImplicitThis
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Emit options
     "declaration": true,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+
+    // NestJS decorator support
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+
+    // Interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // Performance
+    "skipLibCheck": true
   }
 }

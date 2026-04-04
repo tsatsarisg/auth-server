@@ -1,18 +1,12 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import {
-  ConflictException,
-  BadRequestException,
-  Inject,
-} from '@nestjs/common';
+import { ConflictException, BadRequestException, Inject } from '@nestjs/common';
 import { RegisterUserCommand } from './register-user.command.js';
 import { AUTH_USER_PORT, type AuthUserPort } from '../shared/ports/auth-user.port.js';
 import { UserService } from '../../identity/shared/identity.service.js';
 import { UserRegisteredEvent } from './user-registered.event.js';
 
 @CommandHandler(RegisterUserCommand)
-export class RegisterUserHandler
-  implements ICommandHandler<RegisterUserCommand>
-{
+export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
   constructor(
     @Inject(AUTH_USER_PORT) private readonly userPort: AuthUserPort,
     private readonly userService: UserService,

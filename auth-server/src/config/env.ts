@@ -32,6 +32,7 @@ const envSchema = z
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
+  // eslint-disable-next-line no-console -- startup validation runs before logger is available
   console.error('Invalid environment variables:', parsedEnv.error.format());
   process.exit(1);
 }

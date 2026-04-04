@@ -22,9 +22,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   if (ENVS.TRUST_PROXY) {
-    const proxy = /^\d+$/.test(ENVS.TRUST_PROXY)
-      ? Number(ENVS.TRUST_PROXY)
-      : ENVS.TRUST_PROXY;
+    const proxy = /^\d+$/.test(ENVS.TRUST_PROXY) ? Number(ENVS.TRUST_PROXY) : ENVS.TRUST_PROXY;
     app.getHttpAdapter().getInstance().set('trust proxy', proxy);
   }
 
@@ -33,9 +31,7 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
-  const allowedOrigins = ENVS.ALLOWED_ORIGINS
-    ? ENVS.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : [];
+  const allowedOrigins = ENVS.ALLOWED_ORIGINS ? ENVS.ALLOWED_ORIGINS.split(',').map((o) => o.trim()) : [];
 
   app.enableCors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : false,

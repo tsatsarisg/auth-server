@@ -14,12 +14,7 @@ import { ENVS } from '../config/env.js';
 const isPostgres = ENVS.DB_PROVIDER === 'postgres';
 
 @Module({
-  imports: [
-    CqrsModule,
-    ...(isPostgres
-      ? []
-      : [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])]),
-  ],
+  imports: [CqrsModule, ...(isPostgres ? [] : [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])])],
   providers: [
     {
       provide: USER_REPOSITORY,

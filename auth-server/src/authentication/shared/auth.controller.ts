@@ -12,12 +12,7 @@ import {
 import type { Request, Response } from 'express';
 import { CommandBus } from '@nestjs/cqrs';
 import { Throttle } from '@nestjs/throttler';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import {
@@ -54,9 +49,7 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   async register(@Body() body: RegisterDto): Promise<{ message: string }> {
-    return this.commandBus.execute(
-      new RegisterUserCommand(body.email, body.password),
-    );
+    return this.commandBus.execute(new RegisterUserCommand(body.email, body.password));
   }
 
   @Post('login')
@@ -65,20 +58,14 @@ export class AuthController {
   })
   @ApiResponse({
     status: 201,
-    description:
-      'Login successful. Access token in body, refresh token in HttpOnly cookie.',
+    description: 'Login successful. Access token in body, refresh token in HttpOnly cookie.',
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @UsePipes(new ZodValidationPipe(LoginSchema))
-  async login(
-    @Body() body: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ accessToken: string }> {
-    const { accessToken, refreshToken } = await this.commandBus.execute(
-      new LoginCommand(body.email, body.password),
-    );
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
+    const { accessToken, refreshToken } = await this.commandBus.execute(new LoginCommand(body.email, body.password));
 
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
     return { accessToken };
@@ -99,17 +86,15 @@ export class AuthController {
   })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ accessToken: string }> {
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
     const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await this.commandBus.execute(new RefreshTokenCommand(refreshToken));
+    const { accessToken, refreshToken: newRefreshToken } = await this.commandBus.execute(
+      new RefreshTokenCommand(refreshToken),
+    );
 
     res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, REFRESH_COOKIE_OPTIONS);
     return { accessToken };
@@ -121,10 +106,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Logged out successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseGuards(JwtAuthGuard)
-  async logout(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string }> {
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response): Promise<{ message: string }> {
     const userId = req.user?.sub;
     if (!userId) {
       throw new UnauthorizedException('User not found in token');

@@ -3,9 +3,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { RefreshTokenReusedEvent } from './refresh-token-reused.event.js';
 
 @EventsHandler(RefreshTokenReusedEvent)
-export class RefreshTokenReusedAuditHandler
-  implements IEventHandler<RefreshTokenReusedEvent>
-{
+export class RefreshTokenReusedAuditHandler implements IEventHandler<RefreshTokenReusedEvent> {
   constructor(
     @InjectPinoLogger(RefreshTokenReusedAuditHandler.name)
     private readonly logger: PinoLogger,

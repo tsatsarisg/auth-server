@@ -21,6 +21,7 @@ export class UserPostgresRepository implements UserRepository {
     if (result.length === 0) return null;
 
     const record = result[0];
+    if (!record) return null;
     if (record.passwordHash) {
       record.passwordHash = this.encryptor.decrypt(record.passwordHash);
     }
@@ -29,14 +30,12 @@ export class UserPostgresRepository implements UserRepository {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.email, email));
+    const result = await this.db.select().from(users).where(eq(users.email, email));
 
     if (result.length === 0) return null;
 
     const record = result[0];
+    if (!record) return null;
     if (record.passwordHash) {
       record.passwordHash = this.encryptor.decrypt(record.passwordHash);
     }

@@ -1,10 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  timestamp,
-  boolean,
-  text,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, timestamp, boolean, text } from 'drizzle-orm/pg-core';
 import { users } from './user.schema';
 
 export const refreshTokens = pgTable('refresh_tokens', {

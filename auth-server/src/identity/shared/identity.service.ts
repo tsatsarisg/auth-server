@@ -3,10 +3,7 @@ import type { UserRepository } from './ports/user.repository.js';
 import { User } from './user.aggregate.js';
 import { USER_REPOSITORY } from './ports/user.repository.js';
 import { randomUUID } from 'crypto';
-import {
-  PASSWORD_HASHER,
-  type PasswordHasher,
-} from './ports/password-hasher.js';
+import { PASSWORD_HASHER, type PasswordHasher } from './ports/password-hasher.js';
 import { Password } from './password.vo.js';
 import { RegisterDto } from './dtos/register.dto.js';
 import type { AuthUserPort } from '../../authentication/shared/ports/auth-user.port.js';
@@ -14,7 +11,7 @@ import type { AuthUserPort } from '../../authentication/shared/ports/auth-user.p
 @Injectable()
 export class UserService implements AuthUserPort {
   constructor(
-    @Inject(USER_REPOSITORY) private userRepository: UserRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
   ) {}
 

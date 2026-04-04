@@ -7,10 +7,7 @@ export interface StoredRefreshToken {
 }
 
 export interface RefreshTokenRepository {
-  store(
-    userId: string,
-    token: { jti: string; hash: string; expiresAt: Date },
-  ): Promise<void>;
+  store(userId: string, token: { jti: string; hash: string; expiresAt: Date }): Promise<void>;
   findByJti(jti: string): Promise<StoredRefreshToken | null>;
   revoke(jti: string): Promise<void>;
   revokeAllForUser(userId: string): Promise<void>;

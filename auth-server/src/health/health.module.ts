@@ -24,11 +24,12 @@ export class HealthModule implements OnModuleInit {
       });
     } else {
       const mongoose = await import('mongoose');
-      this.healthController.setDatabaseCheck(async () => {
+      this.healthController.setDatabaseCheck(() => {
         const state = mongoose.default.connection.readyState;
         if (state !== 1) {
           throw new Error(`Mongoose connection state: ${state}`);
         }
+        return Promise.resolve();
       });
     }
   }

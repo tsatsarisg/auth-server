@@ -1,5 +1,5 @@
 import { User } from '../../user.aggregate.js';
-import { UserMongoDocument } from './schemas/user.schema.js';
+import { type UserMongoDocument } from './schemas/user.schema.js';
 
 export class UserMapper {
   static toDomain(raw: UserMongoDocument): User {
@@ -13,9 +13,7 @@ export class UserMapper {
     });
   }
 
-  static toPersistence(
-    user: User,
-  ): Partial<UserMongoDocument> {
+  static toPersistence(user: User): Partial<UserMongoDocument> {
     return {
       _id: user.id,
       email: user.email,

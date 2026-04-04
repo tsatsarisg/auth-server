@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import {
-  REFRESH_TOKEN_REPOSITORY,
-  type RefreshTokenRepository,
-} from './ports/refresh-token.repository.js';
+import { REFRESH_TOKEN_REPOSITORY, type RefreshTokenRepository } from './ports/refresh-token.repository.js';
 
 @Injectable()
 export class TokenCleanupService {
@@ -21,10 +18,7 @@ export class TokenCleanupService {
     this.logger.info('Starting expired/revoked refresh token cleanup');
     try {
       const count = await this.refreshTokenRepo.deleteExpiredAndRevoked();
-      this.logger.info(
-        { removedCount: count },
-        'Refresh token cleanup completed',
-      );
+      this.logger.info({ removedCount: count }, 'Refresh token cleanup completed');
     } catch (e) {
       this.logger.error({ err: e }, 'Refresh token cleanup failed');
     }

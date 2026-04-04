@@ -48,10 +48,13 @@ export class NodePasswordHasher {
         const parts = stored.split('$');
         // parts: ["scrypt", "N=32768,r=8,p=1", "salt:hash"]
         if (parts.length !== 3) return false;
-        const params = this.parseParams(parts[1]);
+        const paramStr = parts[1];
+        const hashPart = parts[2];
+        if (!paramStr || !hashPart) return false;
+        const params = this.parseParams(paramStr);
         if (!params) return false;
 
-        const [saltHex, derivedHex] = parts[2].split(':');
+        const [saltHex, derivedHex] = hashPart.split(':');
         if (!saltHex || !derivedHex) return false;
 
         const salt = Buffer.from(saltHex, 'hex');
@@ -81,16 +84,17 @@ export class NodePasswordHasher {
     }
   }
 
-  private parseParams(
-    paramStr: string,
-  ): { N: number; r: number; p: number } | null {
+  private parseParams(paramStr: string): { N: number; r: number; p: number } | null {
     const map: Record<string, number> = {};
     for (const pair of paramStr.split(',')) {
       const [key, val] = pair.split('=');
       if (!key || !val) return null;
       map[key] = Number(val);
     }
-    if (!map.N || !map.r || !map.p) return null;
-    return { N: map.N, r: map.r, p: map.p };
+    const N = map['N'];
+    const r = map['r'];
+    const p = map['p'];
+    if (!N || !r || !p) return null;
+    return { N, r, p };
   }
 }

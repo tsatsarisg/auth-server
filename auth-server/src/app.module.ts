@@ -13,8 +13,7 @@ import { HealthModule } from './health/health.module.js';
 import { ENVS } from './config/env.js';
 import type { IncomingMessage } from 'http';
 
-const dbModule =
-  ENVS.DB_PROVIDER === 'postgres' ? DrizzleModule : DatabaseModule;
+const dbModule = ENVS.DB_PROVIDER === 'postgres' ? DrizzleModule : DatabaseModule;
 
 @Module({
   imports: [
@@ -28,9 +27,7 @@ const dbModule =
           return randomUUID();
         },
         transport:
-          process.env.NODE_ENV !== 'production'
-            ? { target: 'pino-pretty', options: { singleLine: true } }
-            : undefined,
+          process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
         level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
       },
     }),

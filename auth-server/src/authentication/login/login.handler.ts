@@ -12,19 +12,14 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     private readonly eventBus: EventBus,
   ) {}
 
-  async execute(
-    command: LoginCommand,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async execute(command: LoginCommand): Promise<{ accessToken: string; refreshToken: string }> {
     const { email, password } = command;
     const result = await this.authService.login(email, password);
 
     if (result.isErr()) {
       const error = result.error;
       this.eventBus.publish(new LoginFailedEvent(email, error.type));
-      if (
-        error.type === 'user_not_found' ||
-        error.type === 'invalid_credentials'
-      ) {
+      if (error.type === 'user_not_found' || error.type === 'invalid_credentials') {
         throw new UnauthorizedException('Invalid email or password');
       }
       throw new UnauthorizedException('Login failed');
