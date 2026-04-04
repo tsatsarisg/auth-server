@@ -1,3 +1,7 @@
+# Monorepo layout: the top-level "auth-server" repo contains a workspace package
+# also named "auth-server". All NestJS application source code lives in
+# auth-server/auth-server/src/. The nesting is intentional (workspace root vs
+# workspace package) and should NOT be restructured.
 packages:
   - auth-server
 

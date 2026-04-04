@@ -1,0 +1,45 @@
+# ---- Stage 1: Install dependencies ----
+FROM node:20-alpine AS deps
+
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY auth-server/package.json ./auth-server/package.json
+
+RUN pnpm install --frozen-lockfile
+
+# ---- Stage 2: Build TypeScript ----
+FROM deps AS build
+
+COPY auth-server/ ./auth-server/
+
+RUN pnpm --filter=auth-server run build
+
+# ---- Stage 3: Production image ----
+FROM node:20-alpine AS production
+
+RUN npm install -g pnpm
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY auth-server/package.json ./auth-server/package.json
+
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=build /app/auth-server/dist ./auth-server/dist
+
+# Run as non-root user for security
+RUN addgroup -g 1001 appgroup && \
+    adduser -u 1001 -G appgroup -s /bin/sh -D appuser && \
+    chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 3000
+
+CMD ["node", "auth-server/dist/main.js"]
