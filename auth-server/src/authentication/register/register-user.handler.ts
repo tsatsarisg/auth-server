@@ -3,7 +3,6 @@ import { Inject } from '@nestjs/common';
 import { err, ok, type Result } from 'neverthrow';
 import { RegisterUserCommand } from './register-user.command.js';
 import { AUTH_USER_PORT, type AuthUserPort } from '../shared/ports/auth-user.port.js';
-import { UserService } from '../../identity/shared/identity.service.js';
 import { UserRegisteredEvent } from './user-registered.event.js';
 import { type AppError } from '../../common/errors/app-error.js';
 
@@ -11,7 +10,6 @@ import { type AppError } from '../../common/errors/app-error.js';
 export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
   constructor(
     @Inject(AUTH_USER_PORT) private readonly userPort: AuthUserPort,
-    private readonly userService: UserService,
     private readonly eventBus: EventBus,
   ) {}
 
@@ -22,7 +20,7 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
       const existingUser = await this.userPort.findByEmail(email);
       if (existingUser) return err({ code: 'CONFLICT', resource: 'user' });
 
-      await this.userService.create({ email, password });
+      await this.userPort.create(email, password);
       this.eventBus.publish(new UserRegisteredEvent(email));
       return ok({ message: 'User registered successfully' });
     } catch (e) {

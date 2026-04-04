@@ -9,6 +9,7 @@ import { PASSWORD_HASHER } from './shared/ports/password-hasher.js';
 import { NodePasswordHasher } from './shared/adapters/scrypt-password-hasher.js';
 import { UserSchema } from './shared/adapters/mongo/schemas/user.schema.js';
 import { FindUserByEmailHandler } from './find-user-by-email/find-user-by-email.handler.js';
+import { AUTH_USER_PORT } from '../authentication/shared/ports/auth-user.port.js';
 import { ENVS } from '../config/env.js';
 
 const isPostgres = ENVS.DB_PROVIDER === 'postgres';
@@ -22,8 +23,9 @@ const isPostgres = ENVS.DB_PROVIDER === 'postgres';
     },
     { provide: PASSWORD_HASHER, useClass: NodePasswordHasher },
     UserService,
+    { provide: AUTH_USER_PORT, useExisting: UserService },
     FindUserByEmailHandler,
   ],
-  exports: [UserService],
+  exports: [AUTH_USER_PORT],
 })
 export class IdentityModule {}

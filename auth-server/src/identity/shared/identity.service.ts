@@ -5,7 +5,6 @@ import { USER_REPOSITORY } from './ports/user.repository.js';
 import { randomUUID } from 'crypto';
 import { PASSWORD_HASHER, type PasswordHasher } from './ports/password-hasher.js';
 import { Password } from './password.vo.js';
-import { RegisterDto } from './dtos/register.dto.js';
 import type { AuthUserPort } from '../../authentication/shared/ports/auth-user.port.js';
 
 @Injectable()
@@ -15,19 +14,10 @@ export class UserService implements AuthUserPort {
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
   ) {}
 
-  async create(dto: RegisterDto): Promise<User> {
-    const id = randomUUID();
-    const passwordVo = Password.create(dto.password);
+  async create(email: string, password: string): Promise<User> {
+    const passwordVo = Password.create(password);
     const passwordHash = await this.hasher.hash(passwordVo.value);
-
-    const user = User.register(id, dto.email, passwordHash);
-    await this.userRepository.create(user);
-    return user;
-  }
-
-  async createUser(email: string, passwordHash: string): Promise<User> {
-    const id = randomUUID();
-    const user = User.register(id, email, passwordHash);
+    const user = User.register(randomUUID(), email, passwordHash);
     await this.userRepository.create(user);
     return user;
   }

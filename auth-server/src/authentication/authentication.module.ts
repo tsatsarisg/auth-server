@@ -4,12 +4,10 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { IdentityModule } from '../identity/identity.module.js';
-import { UserService } from '../identity/shared/identity.service.js';
 import { UserSchema } from '../identity/shared/adapters/mongo/schemas/user.schema.js';
 import { TokenService } from './shared/token.service.js';
 import { AuthController } from './shared/auth.controller.js';
 import { REFRESH_TOKEN_REPOSITORY } from './shared/ports/refresh-token.repository.js';
-import { AUTH_USER_PORT } from './shared/ports/auth-user.port.js';
 import { RefreshTokenPostgresRepository } from './shared/adapters/postgres/refresh-token.repository.postgres.js';
 import { RefreshTokenMongoRepository } from './shared/adapters/mongo/refresh-token.repository.mongo.js';
 import { TokenCleanupService } from './shared/token-cleanup.service.js';
@@ -50,10 +48,6 @@ const EventHandlers = [
     {
       provide: REFRESH_TOKEN_REPOSITORY,
       useClass: isPostgres ? RefreshTokenPostgresRepository : RefreshTokenMongoRepository,
-    },
-    {
-      provide: AUTH_USER_PORT,
-      useExisting: UserService,
     },
     ...CommandHandlers,
     ...EventHandlers,
