@@ -40,9 +40,6 @@ importers:
       helmet:
         specifier: ^8.1.0
         version: 8.1.0
-      jsonwebtoken:
-        specifier: ^9.0.2
-        version: 9.0.2
       mongoose:
         specifier: ^8.19.2
         version: 8.19.2
@@ -98,9 +95,6 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
-      '@types/jsonwebtoken':
-        specifier: ^9.0.10
-        version: 9.0.10
       '@types/mongoose':
         specifier: ^5.11.97
         version: 5.11.97

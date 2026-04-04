@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import User from '../../domain/user.entity';
-import UserRepository from '../../domain/user.repository.interface';
+import { User } from '../../domain/user.entity';
+import { UserRepository } from '../../domain/user.repository.interface';
 import { UserMongoDocument } from './schemas/user.schema';
 import { UserMapper } from './user.mapper';
-import Encryptor from '../../../encryptor/encryptor';
+import { Encryptor } from '../../../encryptor/encryptor';
 
 @Injectable()
-export default class UserMongoRepository implements UserRepository {
+export class UserMongoRepository implements UserRepository {
   constructor(
     @InjectModel('User') private readonly userModel: Model<UserMongoDocument>,
     private readonly encryptor: Encryptor,
@@ -43,6 +43,9 @@ export default class UserMongoRepository implements UserRepository {
 
   async update(user: User): Promise<void> {
     const data = UserMapper.toPersistence(user);
+    if (data.passwordHash) {
+      data.passwordHash = this.encryptor.encrypt(data.passwordHash);
+    }
     await this.userModel.findByIdAndUpdate(user.id, data, { new: true }).exec();
   }
 

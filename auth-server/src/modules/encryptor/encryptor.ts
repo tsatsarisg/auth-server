@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
 @Injectable()
-export default class Encryptor {
+export class Encryptor {
   constructor(private readonly base64Key: string) {
     if (!base64Key)
       throw new InternalServerErrorException('Encryption key not provided');

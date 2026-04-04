@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
-import Encryptor from './encryptor';
-import ENVS from 'src/config/env';
+import { Encryptor } from './encryptor';
+import { ENVS } from '../../config/env';
 
 @Global()
 @Module({

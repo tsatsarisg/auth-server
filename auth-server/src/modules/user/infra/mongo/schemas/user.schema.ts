@@ -5,13 +5,16 @@ import { randomUUID } from 'crypto';
 @Schema({ timestamps: true })
 export class UserDocument {
   @Prop({ type: String, default: () => randomUUID() })
-  _id: string;
+  _id!: string;
 
   @Prop({ required: true, unique: true, lowercase: true })
-  email: string;
+  email!: string;
 
   @Prop()
-  passwordHash: string;
+  passwordHash!: string;
+
+  @Prop({ type: Boolean, default: false })
+  isEmailVerified!: boolean;
 
   @Prop({ type: Array, default: [] })
   refreshTokens?: Array<{
@@ -21,6 +24,9 @@ export class UserDocument {
     revoked?: boolean;
     createdAt?: Date;
   }>;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type UserMongoDocument = UserDocument & Document & { _id: string };

@@ -1,18 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { UserService } from '../../user/application/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { err, ok, Result } from 'neverthrow';
 import { randomUUID } from 'crypto';
-import ENVS from '../../../config/env';
+import { ENVS } from '../../../config/env';
 import {
   REFRESH_TOKEN_REPOSITORY,
   type RefreshTokenRepository,
 } from '../domain/refresh-token.repository.interface';
 import {
-  PASSWORD_HASHER,
-  type PasswordHasher,
-} from '../../user/domain/password.hasher.interface';
+  AUTH_USER_PORT,
+  type AuthUserPort,
+} from '../domain/auth-user.port';
+import { hashToken, verifyToken } from '../domain/token-hasher';
 
 const ISS = 'auth-server';
 const ALGORITHM = 'HS256' as const;
@@ -25,13 +25,12 @@ type AuthError =
   | { type: 'internal'; message?: string };
 
 @Injectable()
-export default class AuthService {
+export class AuthService {
   constructor(
-    private readonly userService: UserService,
+    @Inject(AUTH_USER_PORT) private readonly userPort: AuthUserPort,
     private readonly jwtService: JwtService,
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokenRepo: RefreshTokenRepository,
-    @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @InjectPinoLogger(AuthService.name)
     private readonly logger: PinoLogger,
   ) {}
@@ -77,7 +76,7 @@ export default class AuthService {
     password: string,
   ): Promise<Result<TokenPair, AuthError>> {
     try {
-      const user = await this.userService.findByEmail(email);
+      const user = await this.userPort.findByEmail(email);
       if (!user) {
         this.logger.info({
           event: 'login_failure',
@@ -87,7 +86,7 @@ export default class AuthService {
         return err({ type: 'user_not_found' });
       }
 
-      const valid = await this.userService.validateUser(email, password);
+      const valid = await this.userPort.validateUser(email, password);
       if (!valid) {
         this.logger.info({
           event: 'login_failure',
@@ -106,20 +105,22 @@ export default class AuthService {
           Date.now() + 7 * 24 * 60 * 60 * 1000,
         ); // 7 days
         refreshToken = this.signRefreshToken({ sub: user.id, jti });
-        const hash = await this.hasher.hash(refreshToken);
+        const hash = hashToken(refreshToken);
         await this.refreshTokenRepo.store(user.id, {
           jti,
           hash,
           expiresAt: refreshExpiresAt,
         });
-      } catch (e: any) {
-        return err({ type: 'internal', message: e?.message });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : undefined;
+        return err({ type: 'internal', message });
       }
 
       this.logger.info({ event: 'login_success', userId: user.id, email });
       return ok({ accessToken, refreshToken });
-    } catch (e: any) {
-      return err({ type: 'internal', message: e?.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : undefined;
+      return err({ type: 'internal', message });
     }
   }
 
@@ -127,10 +128,10 @@ export default class AuthService {
     rawRefreshToken: string,
   ): Promise<Result<TokenPair, AuthError>> {
     try {
-      let payload: any;
+      let payload: Record<string, unknown>;
       try {
         payload = this.verifyRefreshToken(rawRefreshToken);
-      } catch (e: any) {
+      } catch {
         return err({ type: 'invalid_credentials' });
       }
 
@@ -138,7 +139,8 @@ export default class AuthService {
         return err({ type: 'invalid_credentials' });
       }
 
-      const { jti, sub: userId } = payload;
+      const jti = payload.jti as string | undefined;
+      const userId = payload.sub as string | undefined;
       if (!jti || !userId) return err({ type: 'invalid_credentials' });
 
       const stored = await this.refreshTokenRepo.findByJti(jti);
@@ -146,7 +148,7 @@ export default class AuthService {
         return err({ type: 'invalid_credentials' });
       }
 
-      const matches = await this.hasher.compare(rawRefreshToken, stored.hash);
+      const matches = verifyToken(rawRefreshToken, stored.hash);
       if (!matches) {
         this.logger.warn({
           event: 'token_reuse_detected',
@@ -171,7 +173,7 @@ export default class AuthService {
         sub: userId,
         jti: newJti,
       });
-      const newHash = await this.hasher.hash(newRefreshToken);
+      const newHash = hashToken(newRefreshToken);
       await this.refreshTokenRepo.store(userId, {
         jti: newJti,
         hash: newHash,
@@ -180,8 +182,9 @@ export default class AuthService {
 
       this.logger.info({ event: 'token_refresh', userId });
       return ok({ accessToken: newAccessToken, refreshToken: newRefreshToken });
-    } catch (e: any) {
-      return err({ type: 'internal', message: e?.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : undefined;
+      return err({ type: 'internal', message });
     }
   }
 
@@ -190,8 +193,9 @@ export default class AuthService {
       await this.refreshTokenRepo.revokeAllForUser(userId);
       this.logger.info({ event: 'logout', userId });
       return ok(undefined);
-    } catch (e: any) {
-      return err({ type: 'internal', message: e?.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : undefined;
+      return err({ type: 'internal', message });
     }
   }
 }

@@ -38,4 +38,4 @@ if (!parsedEnv.success) {
 
 const ENVS = parsedEnv.data;
 
-export default ENVS;
+export { ENVS };

@@ -1,16 +1,26 @@
-import User from '../../domain/user.entity';
+import { User } from '../../domain/user.entity';
 import { UserMongoDocument } from './schemas/user.schema';
 
 export class UserMapper {
   static toDomain(raw: UserMongoDocument): User {
-    return new User(raw._id, raw.email, raw.passwordHash);
+    return User.reconstitute({
+      id: raw._id,
+      email: raw.email,
+      passwordHash: raw.passwordHash,
+      isEmailVerified: raw.isEmailVerified ?? false,
+      createdAt: raw.createdAt ?? new Date(),
+      updatedAt: raw.updatedAt ?? new Date(),
+    });
   }
 
-  static toPersistence(user: User): Partial<UserMongoDocument> {
+  static toPersistence(
+    user: User,
+  ): Partial<UserMongoDocument> {
     return {
       _id: user.id,
       email: user.email,
       passwordHash: user.passwordHash,
+      isEmailVerified: user.isEmailVerified,
     };
   }
 }

@@ -3,7 +3,7 @@ import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import ENVS from './config/env';
+import { ENVS } from './config/env';
 
 // TLS requirements:
 // - In production, this server MUST run behind a TLS-terminating reverse proxy

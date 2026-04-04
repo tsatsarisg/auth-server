@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import AuthService from '../../application/auth.service';
+import { AuthService } from '../../application/auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -34,7 +34,7 @@ export class JwtAuthGuard implements CanActivate {
 
       request.user = payload;
       return true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof UnauthorizedException) throw e;
       throw new UnauthorizedException('Invalid or expired access token');
     }

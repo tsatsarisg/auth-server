@@ -8,7 +8,7 @@ import type {
 import type { UserMongoDocument } from '../../../user/infra/mongo/schemas/user.schema';
 
 @Injectable()
-export default class RefreshTokenMongoRepository
+export class RefreshTokenMongoRepository
   implements RefreshTokenRepository
 {
   constructor(

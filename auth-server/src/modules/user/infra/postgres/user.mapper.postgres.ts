@@ -1,9 +1,16 @@
-import User from '../../domain/user.entity';
+import { User } from '../../domain/user.entity';
 import { UserRecord, NewUserRecord } from './schema/user.schema';
 
 export class UserPostgresMapper {
   static toDomain(record: UserRecord): User {
-    return new User(record.id, record.email, record.passwordHash);
+    return User.reconstitute({
+      id: record.id,
+      email: record.email,
+      passwordHash: record.passwordHash,
+      isEmailVerified: record.isEmailVerified,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    });
   }
 
   static toPersistence(user: User): NewUserRecord {
@@ -11,6 +18,9 @@ export class UserPostgresMapper {
       id: user.id,
       email: user.email,
       passwordHash: user.passwordHash,
+      isEmailVerified: user.isEmailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 }

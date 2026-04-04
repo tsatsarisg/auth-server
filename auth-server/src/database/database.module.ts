@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import ENVS from '../config/env';
+import { ENVS } from '../config/env';
 
 @Module({
   imports: [

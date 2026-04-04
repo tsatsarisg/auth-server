@@ -9,7 +9,7 @@ import { DRIZZLE_DB } from '../../../../database/drizzle.provider';
 import type { DrizzleDB } from '../../../../database/drizzle.provider';
 
 @Injectable()
-export default class RefreshTokenPostgresRepository
+export class RefreshTokenPostgresRepository
   implements RefreshTokenRepository
 {
   constructor(@Inject(DRIZZLE_DB) private readonly db: DrizzleDB) {}

@@ -1,15 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import User from '../../domain/user.entity';
-import UserRepository from '../../domain/user.repository.interface';
+import { User } from '../../domain/user.entity';
+import { UserRepository } from '../../domain/user.repository.interface';
 import { UserPostgresMapper } from './user.mapper.postgres';
 import { users } from './schema';
 import { DRIZZLE_DB } from '../../../../database/drizzle.provider';
 import type { DrizzleDB } from '../../../../database/drizzle.provider';
-import Encryptor from '../../../encryptor/encryptor';
+import { Encryptor } from '../../../encryptor/encryptor';
 
 @Injectable()
-export default class UserPostgresRepository implements UserRepository {
+export class UserPostgresRepository implements UserRepository {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: DrizzleDB,
     private readonly encryptor: Encryptor,
@@ -57,12 +57,18 @@ export default class UserPostgresRepository implements UserRepository {
   async update(user: User): Promise<void> {
     const data = UserPostgresMapper.toPersistence(user);
 
+    let passwordHash = data.passwordHash;
+    if (passwordHash) {
+      passwordHash = this.encryptor.encrypt(passwordHash);
+    }
+
     await this.db
       .update(users)
       .set({
         email: data.email,
-        passwordHash: data.passwordHash,
-        updatedAt: new Date(),
+        passwordHash,
+        isEmailVerified: data.isEmailVerified,
+        updatedAt: user.updatedAt,
       })
       .where(eq(users.id, user.id));
   }

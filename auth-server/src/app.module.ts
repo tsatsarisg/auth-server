@@ -7,7 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EncryptorModule } from './modules/encryptor/encryptor.module';
-import ENVS from './config/env';
+import { ENVS } from './config/env';
 
 const dbModule =
   ENVS.DB_PROVIDER === 'postgres' ? DrizzleModule : DatabaseModule;

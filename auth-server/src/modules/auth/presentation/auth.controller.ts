@@ -9,11 +9,13 @@ import {
   UseGuards,
   UsePipes,
   ConflictException,
+  Inject,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import AuthService from '../application/auth.service';
+import { AuthService } from '../application/auth.service';
+import { AUTH_USER_PORT, type AuthUserPort } from '../domain/auth-user.port';
 import { UserService } from '../../user/application/user.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
@@ -38,6 +40,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UserService,
+    @Inject(AUTH_USER_PORT) private readonly userPort: AuthUserPort,
     @InjectPinoLogger(AuthController.name)
     private readonly logger: PinoLogger,
   ) {}
@@ -48,8 +51,7 @@ export class AuthController {
   async register(@Body() body: RegisterDto): Promise<{ message: string }> {
     const { email, password } = body;
 
-    // Check if user already exists
-    const existingUser = await this.userService.findByEmail(email);
+    const existingUser = await this.userPort.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
@@ -58,7 +60,7 @@ export class AuthController {
       await this.userService.create({ email, password });
       this.logger.info({ event: 'registration', email });
       return { message: 'User registered successfully' };
-    } catch (e: any) {
+    } catch {
       throw new BadRequestException('Failed to register user');
     }
   }

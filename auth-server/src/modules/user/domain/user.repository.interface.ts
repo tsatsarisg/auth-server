@@ -1,6 +1,6 @@
-import User from './user.entity';
+import { User } from './user.entity';
 
-export default interface UserRepository {
+export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   create(user: User): Promise<void>;
