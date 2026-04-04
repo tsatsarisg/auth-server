@@ -1,159 +1,301 @@
 # Auth Server
 
-A NestJS authentication server with JWT, refresh tokens, MongoDB, and clean architecture.
+**Production-reference authentication server built with NestJS, TypeScript, and clean architecture.**
 
-## Quick Start
+> **License: Source Available -- View Only.**
+> This project is proprietary. You may view the source code for reference purposes only.
+> See [LICENSE](./LICENSE) for full terms.
 
-```bash
-# Clone and install
-git clone <repo-url>
-cd auth-server
-pnpm install
+---
 
-# Set environment variables
-cp infra/envs/.env.dev .env
+## Overview
 
-# Start with Docker Compose
-docker-compose -f infra/docker/docker-compose.dev.yml up
+Auth Server is a production-grade authentication service demonstrating clean architecture, CQRS, and domain-driven design principles in a NestJS application. It implements JWT-based authentication with refresh token rotation, multi-database support, and defense-in-depth security practices.
 
-# Or manually (requires local MongoDB)
-pnpm --filter auth-server start:dev
-```
+The architecture follows a vertical slice approach inspired by Greg Young's CQRS and domain modeling patterns. Each use case (register, login, refresh, logout) is an isolated vertical slice with its own command, handler, and domain events. Cross-cutting concerns like encryption, persistence, and logging are separated through ports and adapters, keeping the domain logic free of infrastructure dependencies.
 
-Server runs on **http://localhost:3000**
+The codebase is organized into two bounded contexts -- **Identity** (user management, password hashing, persistence) and **Authentication** (token issuance, rotation, revocation, session lifecycle). Communication between contexts flows through well-defined ports, making each context independently testable and replaceable.
 
-## Prerequisites
-
-- Node.js v20+
-- pnpm v9+
-- Docker & Docker Compose (optional)
-- MongoDB running locally or via Docker
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint         | Body                | Description                 |
-| ------ | ---------------- | ------------------- | --------------------------- |
-| POST   | `/auth/register` | `{email, password}` | Create new user             |
-| POST   | `/auth/login`    | `{email, password}` | Get access & refresh tokens |
-| POST   | `/auth/refresh`  | `{refreshToken}`    | Get new token pair          |
-| POST   | `/auth/logout`   | Bearer token        | Revoke all refresh tokens   |
-
-**Example Login:**
-
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}'
-```
-
-Response:
-
-```json
-{
-  "accessToken": "eyJhbGc...",
-  "refreshToken": "eyJhbGc..."
-}
-```
+---
 
 ## Architecture
 
-```
-src/modules/
-├── auth/
-│   ├── application/          # Use cases (AuthService)
-│   ├── presentation/         # HTTP handlers (AuthController)
-│   └── guards/               # JWT auth guard
-├── user/
-│   ├── application/          # User operations (UserService)
-│   ├── domain/               # Business logic & interfaces
-│   └── infra/mongo/          # Database layer
-└── encryptor/                # Encryption utilities
-```
+### Vertical Slice Organization
 
-**Layers:**
+Each feature is a self-contained slice with its own command/query, handler, and domain events. Shared infrastructure (controllers, services, adapters) lives in a `shared/` directory within each bounded context.
 
-- **Domain**: Core business logic, no dependencies
-- **Application**: Services orchestrating domain logic
-- **Presentation**: Controllers & HTTP handlers
-- **Infrastructure**: Database & external services
+### Bounded Contexts
 
-## Environment Variables
+- **Identity** -- Owns the user aggregate, email/password value objects, password hashing strategy, and user persistence.
+- **Authentication** -- Owns token issuance, refresh token rotation, reuse detection, logout, and scheduled cleanup.
 
-```env
-PORT=3000
-MONGO_URI=mongodb://admin:admin123@localhost:27017/auth_dev?authSource=admin
-JWT_SECRET=your-secret-key-min-8-chars
-ENCRYPTION_KEY_BASE64=base64-encoded-encryption-key
-```
+### Patterns
 
-## Available Scripts
+- **CQRS** -- Commands mutate state (register, login, refresh, logout); queries read state (find user by email). Dispatched via NestJS `CommandBus` and `QueryBus`.
+- **Ports and Adapters** -- Domain logic depends on port interfaces (`UserRepository`, `PasswordHasher`, `RefreshTokenRepository`). Concrete adapters (Postgres, MongoDB) are injected at the module level.
+- **Domain Events** -- Each use case emits domain events (`UserRegistered`, `LoginSucceeded`, `RefreshTokenReused`, `UserLoggedOut`) consumed by audit handlers for structured logging.
+- **Result Type** -- Business operations return `Result<T, E>` (via neverthrow) instead of throwing exceptions, keeping error handling explicit in the domain layer.
 
-```bash
-# Development
-pnpm --filter auth-server start:dev    # Hot reload
-pnpm --filter auth-server lint         # ESLint
-pnpm --filter auth-server format       # Prettier
-
-# Testing
-pnpm --filter auth-server test         # Unit tests
-pnpm --filter auth-server test:e2e     # E2E tests
-pnpm --filter auth-server test:cov     # Coverage
-
-# Production
-pnpm --filter auth-server build        # Compile
-pnpm --filter auth-server start:prod   # Run
-```
-
-## Key Features
-
-✅ **JWT Access & Refresh Tokens** - 15m access, 7d refresh with rotation  
-✅ **Secure Password Hashing** - scrypt with salt  
-✅ **Token Rotation** - Refresh endpoint issues new token pair  
-✅ **Theft Detection** - Revokes all sessions on invalid refresh  
-✅ **Clean Architecture** - Domain, application, & infrastructure layers  
-✅ **Type Safe** - Full TypeScript with strict typing  
-✅ **MongoDB** - Document-based persistence
-
-## Token Flow
-
-1. **Login** → User provides email/password → Server issues access + refresh tokens
-2. **Access API** → Client sends `Authorization: Bearer <accessToken>`
-3. **Token Expires** → Client calls refresh endpoint with `refreshToken`
-4. **Refresh** → Server validates, rotates tokens, issues new pair
-5. **Logout** → Server revokes all refresh tokens for user
-
-## Troubleshooting
-
-```bash
-# MongoDB connection issues
-docker-compose -f infra/docker/docker-compose.dev.yml logs mongodb
-
-# Port 3000 in use
-lsof -i :3000 && kill -9 <PID>
-
-# Clean rebuild
-docker-compose -f infra/docker/docker-compose.dev.yml down -v
-docker-compose -f infra/docker/docker-compose.dev.yml up --build
-```
-
-## Project Structure
+### Directory Structure
 
 ```
 auth-server/
-├── src/
-│   ├── config/env.ts              # Environment validation
-│   ├── database/database.module.ts # MongoDB setup
-│   └── modules/
-│       ├── auth/                  # Authentication
-│       ├── user/                  # User management
-│       └── encryptor/             # Encryption
-├── test/app.e2e-spec.ts           # E2E tests
-├── infra/docker/                  # Docker configs
-└── package.json
+  src/
+    authentication/
+      login/               # LoginCommand, handler, domain events
+      logout/              # LogoutCommand, handler, domain events
+      refresh/             # RefreshTokenCommand, handler, reuse detection
+      register/            # RegisterUserCommand, handler, domain events
+      shared/
+        adapters/          # Postgres + MongoDB refresh token repositories
+        guards/            # JWT auth guard
+        ports/             # RefreshTokenRepository, AuthUserPort interfaces
+        auth.controller.ts # HTTP layer (all auth endpoints)
+        auth.service.ts    # Token signing, verification, rotation logic
+        token-cleanup.service.ts  # Scheduled purge of expired tokens
+        token-hasher.ts    # SHA-256 token hashing for storage
+      authentication.module.ts
+    identity/
+      find-user-by-email/  # Query + handler
+      shared/
+        adapters/          # Postgres + MongoDB user repositories, mappers
+        dtos/              # Zod schemas + Swagger DTOs
+        ports/             # UserRepository, PasswordHasher interfaces
+        email.vo.ts        # Email value object
+        password.vo.ts     # Password value object
+        user.aggregate.ts  # User aggregate root
+        identity.service.ts
+      identity.module.ts
+    common/
+      pipes/               # ZodValidationPipe
+    config/
+      env.ts               # Zod-validated environment variables
+    database/
+      database.module.ts   # MongoDB (Mongoose) provider
+      drizzle.module.ts    # PostgreSQL (Drizzle) provider
+      drizzle.provider.ts
+    encryption/
+      encryptor.ts         # AES-256-GCM encrypt/decrypt
+      encryption.module.ts
+    health/
+      health.controller.ts # /health with DB connectivity check
+      health.module.ts
+    app.module.ts
+    main.ts
 ```
+
+---
+
+## Features
+
+- JWT authentication with access tokens (15 min) and refresh token rotation (7 day)
+- Refresh token reuse detection -- revokes all sessions on replay attack
+- Multi-database support: PostgreSQL (Drizzle ORM) and MongoDB (Mongoose), switchable via environment variable
+- AES-256-GCM encryption at rest for stored password hashes
+- Scrypt password hashing with versioned cost parameters and timing-safe comparison
+- Per-endpoint rate limiting (e.g., 3 req/min for registration, 5 for login)
+- HttpOnly, Secure, SameSite=Strict cookie-based refresh tokens
+- Audit logging via domain events (register, login, refresh reuse, logout)
+- Health check endpoint with database connectivity verification
+- OpenAPI / Swagger documentation at `/docs`
+- Scheduled token cleanup (daily purge of expired and revoked tokens)
+- Correlation IDs via `X-Request-Id` header propagation (Pino)
+- Helmet security headers
+- Configurable CORS with origin allowlist
+- Zod schema validation at the HTTP boundary
+- Docker support with dev and production multi-stage builds
+- Request body size limit (16 KB) to mitigate hash-DoS attacks
+- Trust proxy configuration for deployment behind reverse proxies
+
+---
+
+## Tech Stack
+
+| Category        | Technology                             |
+| --------------- | -------------------------------------- |
+| Runtime         | Node.js 22 LTS                         |
+| Framework       | NestJS 11                              |
+| Language        | TypeScript 5.7+ (strict mode)          |
+| Databases       | PostgreSQL 17, MongoDB 8               |
+| ORM             | Drizzle ORM (Postgres), Mongoose (MongoDB) |
+| Auth            | JWT with HS256, separate signing keys  |
+| Validation      | Zod                                    |
+| Logging         | Pino (structured JSON, pino-pretty dev)|
+| API Docs        | Swagger / OpenAPI 3.0                  |
+| Containers      | Docker, Docker Compose                 |
+| Package Manager | pnpm 10                                |
+| Linting         | ESLint 10 (flat config), Prettier      |
+| Testing         | Jest, Supertest                        |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+ (LTS)
+- pnpm 10+
+- Docker and Docker Compose
+
+### Setup
+
+1. **Clone the repository**
+
+   ```bash
+   git clone <repository-url>
+   cd auth-server
+   ```
+
+2. **Configure environment variables**
+
+   ```bash
+   cp infra/envs/.env.dev.example infra/envs/.env.dev
+   ```
+
+   Edit `infra/envs/.env.dev` and fill in your secrets. At minimum, generate the required keys:
+
+   ```bash
+   # Generate JWT secrets (32+ characters each)
+   openssl rand -hex 32
+
+   # Generate AES-256 encryption key (exactly 32 bytes, base64-encoded)
+   openssl rand -base64 32
+   ```
+
+3. **Start infrastructure**
+
+   ```bash
+   docker compose -f infra/docker/docker-compose.dev.yml up -d mongo postgres
+   ```
+
+4. **Install dependencies**
+
+   ```bash
+   pnpm install
+   ```
+
+5. **Run database migrations** (PostgreSQL only)
+
+   ```bash
+   pnpm --filter auth-server run db:migrate
+   ```
+
+6. **Start the development server**
+
+   ```bash
+   pnpm --filter auth-server run start:dev
+   ```
+
+7. **Verify**
+
+   - Swagger UI: [http://localhost:3000/docs](http://localhost:3000/docs)
+   - Health check: [http://localhost:3000/health](http://localhost:3000/health)
+
+### Full-Stack Dev (Docker)
+
+To run everything in Docker (databases + application with hot reload):
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml up
+```
+
+---
+
+## Docker
+
+### Development
+
+```bash
+docker compose -f infra/docker/docker-compose.dev.yml up
+```
+
+Includes hot reload via volume mounts. Application runs on port 3000.
+
+### Production
+
+With PostgreSQL:
+
+```bash
+docker compose -f infra/docker/docker-compose.prod.yml --profile postgres up -d
+```
+
+With MongoDB:
+
+```bash
+docker compose -f infra/docker/docker-compose.prod.yml --profile mongo up -d
+```
+
+Production builds use multi-stage Dockerfiles for minimal image size.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint               | Description                          | Auth Required |
+| ------ | ---------------------- | ------------------------------------ | ------------- |
+| POST   | `/api/v1/auth/register`| Register a new user                  | No            |
+| POST   | `/api/v1/auth/login`   | Authenticate and receive tokens      | No            |
+| POST   | `/api/v1/auth/refresh` | Rotate refresh token, get new access | Cookie        |
+| POST   | `/api/v1/auth/logout`  | Revoke all refresh tokens            | Bearer token  |
+| GET    | `/health`              | Health check with DB status          | No            |
+| GET    | `/docs`                | Swagger UI                           | No            |
+
+---
+
+## Project Scripts
+
+All scripts are scoped to the `auth-server` workspace. Run with `pnpm --filter auth-server run <script>`.
+
+| Script           | Description                              |
+| ---------------- | ---------------------------------------- |
+| `start:dev`      | Start with hot reload (watch mode)       |
+| `start:debug`    | Start with debugger attached             |
+| `start:prod`     | Run compiled production build            |
+| `build`          | Compile TypeScript to `dist/`            |
+| `lint`           | Run ESLint                               |
+| `lint:fix`       | Run ESLint with auto-fix                 |
+| `format`         | Format code with Prettier                |
+| `format:check`   | Check formatting without writing         |
+| `typecheck`      | Run TypeScript type checking             |
+| `test`           | Run unit tests                           |
+| `test:watch`     | Run tests in watch mode                  |
+| `test:cov`       | Run tests with coverage report           |
+| `test:e2e`       | Run end-to-end tests                     |
+| `db:generate`    | Generate Drizzle migration files         |
+| `db:migrate`     | Run Drizzle migrations                   |
+| `db:push`        | Push schema changes directly (dev only)  |
+| `db:studio`      | Open Drizzle Studio GUI                  |
+| `audit`          | Run security audit on dependencies       |
+| `deps:check`     | Check for outdated dependencies          |
+
+Root-level convenience scripts:
+
+| Script      | Description                                  |
+| ----------- | -------------------------------------------- |
+| `dev`       | Start full dev stack via Docker Compose       |
+| `dev:down`  | Tear down dev Docker Compose stack            |
+
+---
+
+## Environment Variables
+
+| Variable               | Description                                          | Required                    |
+| ---------------------- | ---------------------------------------------------- | --------------------------- |
+| `PORT`                 | Server port                                          | Yes                         |
+| `NODE_ENV`             | Environment (`development`, `production`)             | Yes                         |
+| `DB_PROVIDER`          | Database backend (`postgres` or `mongo`)              | Yes (default: `postgres`)   |
+| `POSTGRES_URI`         | PostgreSQL connection string                          | When `DB_PROVIDER=postgres` |
+| `MONGO_URI`            | MongoDB connection string                             | When `DB_PROVIDER=mongo`    |
+| `JWT_SECRET`           | Access token signing key (min 32 characters)          | Yes                         |
+| `JWT_REFRESH_SECRET`   | Refresh token signing key (min 32 characters)         | Yes                         |
+| `ENCRYPTION_KEY_BASE64`| AES-256 key for encryption at rest (base64, 32 bytes) | Yes                         |
+| `ALLOWED_ORIGINS`      | Comma-separated CORS origins                          | No                          |
+| `TRUST_PROXY`          | Proxy hop count or trusted IPs for `X-Forwarded-*`    | No                          |
+
+---
 
 ## License
 
-UNLICENSED
+This project is **proprietary and source-available for viewing purposes only**. You may not use, copy, modify, or distribute the code. See the [LICENSE](./LICENSE) file for full terms.
+
+Copyright (c) 2025-present George. All rights reserved.

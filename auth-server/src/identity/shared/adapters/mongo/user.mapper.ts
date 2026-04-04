@@ -1,5 +1,5 @@
 import { User } from '../../user.aggregate.js';
-import { type UserMongoDocument } from './schemas/user.schema.js';
+import { type UserDocument, type UserMongoDocument } from './schemas/user.schema.js';
 
 export class UserMapper {
   static toDomain(raw: UserMongoDocument): User {
@@ -13,7 +13,7 @@ export class UserMapper {
     });
   }
 
-  static toPersistence(user: User): Partial<UserMongoDocument> {
+  static toPersistence(user: User): Pick<UserDocument, '_id' | 'email' | 'passwordHash' | 'isEmailVerified'> {
     return {
       _id: user.id,
       email: user.email,

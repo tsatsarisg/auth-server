@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { type HydratedDocument } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 @Schema({ timestamps: true })
@@ -29,6 +29,6 @@ export class UserDocument {
   updatedAt?: Date;
 }
 
-export type UserMongoDocument = UserDocument & Document & { _id: string };
+export type UserMongoDocument = HydratedDocument<UserDocument>;
 
 export const UserSchema = SchemaFactory.createForClass(UserDocument);
