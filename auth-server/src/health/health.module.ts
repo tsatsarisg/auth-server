@@ -6,6 +6,7 @@ import { ENVS } from '../config/env.js';
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController],
+  providers: [HealthController],
 })
 export class HealthModule implements OnModuleInit {
   constructor(private readonly healthController: HealthController) {}

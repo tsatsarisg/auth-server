@@ -52,7 +52,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.dev
-    image: auth-server-dev
+    restart: unless-stopped
     env_file:
       - ../envs/.env.dev
     environment:
@@ -64,12 +64,14 @@ services:
       - /app/node_modules
       - /app/auth-server/node_modules
     depends_on:
-      mongo:
-        condition: service_healthy
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -77,7 +79,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 2G
           cpus: "1.0"
     networks:
       - auth_network_dev

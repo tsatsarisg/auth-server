@@ -1,9 +1,9 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '../auth.service.js';
+import { TokenService } from '../token.service.js';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly tokenService: TokenService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
@@ -19,7 +19,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = this.authService.verifyAccessToken(token);
+      const payload = this.tokenService.verifyAccessToken(token);
 
       if (payload.type !== 'access') {
         throw new UnauthorizedException('Invalid token type: expected access token');
