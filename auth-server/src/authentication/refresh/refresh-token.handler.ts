@@ -2,70 +2,66 @@ import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { err, ok, type Result } from 'neverthrow';
-import { randomUUID } from 'crypto';
 import { RefreshTokenCommand } from './refresh-token.command.js';
 import { RefreshTokenReusedEvent } from './refresh-token-reused.event.js';
-import { TokenService } from '../shared/token.service.js';
+import { TokenService, type RefreshTokenClaims } from '../shared/token.service.js';
+import { TokenIssuer, type TokenPair } from '../shared/token-issuer.js';
 import { REFRESH_TOKEN_REPOSITORY, type RefreshTokenRepository } from '../shared/ports/refresh-token.repository.js';
-import { hashToken, verifyToken } from '../shared/token-hasher.js';
+import { verifyToken } from '../shared/token-hasher.js';
+import { tryCatch } from '../../common/errors/try-catch.js';
 import { type AppError } from '../../common/errors/app-error.js';
-
-type TokenPair = { accessToken: string; refreshToken: string };
 
 @CommandHandler(RefreshTokenCommand)
 export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand> {
   constructor(
     @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokenRepo: RefreshTokenRepository,
     private readonly tokenService: TokenService,
+    private readonly tokenIssuer: TokenIssuer,
     private readonly eventBus: EventBus,
     @InjectPinoLogger(RefreshTokenHandler.name) private readonly logger: PinoLogger,
   ) {}
 
-  async execute(command: RefreshTokenCommand): Promise<Result<TokenPair, AppError>> {
-    const { rawRefreshToken } = command;
+  execute(command: RefreshTokenCommand): Promise<Result<TokenPair, AppError>> {
+    return tryCatch(async () => {
+      const { rawRefreshToken } = command;
 
-    try {
-      let payload: Record<string, unknown>;
+      let claims: RefreshTokenClaims;
       try {
-        payload = this.tokenService.verifyRefreshToken(rawRefreshToken);
+        claims = this.tokenService.verifyRefreshToken(rawRefreshToken);
       } catch {
         return err({ code: 'UNAUTHORIZED', reason: 'invalid_token' });
       }
 
-      if (payload.type !== 'refresh') return err({ code: 'UNAUTHORIZED', reason: 'invalid_token_type' });
-
-      const jti = payload.jti as string | undefined;
-      const userId = payload.sub as string | undefined;
-      if (!jti || !userId) return err({ code: 'UNAUTHORIZED', reason: 'malformed_token' });
-
-      const stored = await this.refreshTokenRepo.findByJti(jti);
-      if (!stored || stored.revoked || new Date(stored.expiresAt) < new Date()) {
-        return err({ code: 'UNAUTHORIZED', reason: 'token_expired_or_revoked' });
+      const claimed = await this.refreshTokenRepo.claim(claims.jti);
+      if (!claimed) {
+        // A signature-valid token whose jti is known but already revoked is a
+        // replayed (rotated) token: revoke the user's whole session family.
+        const stored = await this.refreshTokenRepo.findByJti(claims.jti);
+        if (stored?.revoked) {
+          return this.handleReuse(stored.userId, claims.jti);
+        }
+        return err({ code: 'UNAUTHORIZED', reason: 'unknown_token' });
       }
 
-      if (!verifyToken(rawRefreshToken, stored.hash)) {
-        this.logger.warn({ event: 'token_reuse_detected', userId: stored.userId, jti });
-        await this.refreshTokenRepo.revokeAllForUser(stored.userId);
-        this.eventBus.publish(new RefreshTokenReusedEvent(stored.userId, jti));
-        return err({ code: 'UNAUTHORIZED', reason: 'token_reuse' });
+      if (new Date(claimed.expiresAt) < new Date()) {
+        return err({ code: 'UNAUTHORIZED', reason: 'token_expired' });
       }
 
-      await this.refreshTokenRepo.revoke(jti);
+      if (!verifyToken(rawRefreshToken, claimed.hash)) {
+        // Defense in depth: a signed token whose jti maps to a different hash.
+        return this.handleReuse(claimed.userId, claims.jti);
+      }
 
-      const newJti = randomUUID();
-      const accessToken = this.tokenService.signAccessToken({ sub: userId, email: payload.email });
-      const refreshToken = this.tokenService.signRefreshToken({ sub: userId, jti: newJti });
-      await this.refreshTokenRepo.store(userId, {
-        jti: newJti,
-        hash: hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      const tokens = await this.tokenIssuer.issueTokenPair(claimed.userId, claims.email);
+      this.logger.info({ event: 'token_refresh', userId: claimed.userId });
+      return ok(tokens);
+    });
+  }
 
-      this.logger.info({ event: 'token_refresh', userId });
-      return ok({ accessToken, refreshToken });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : undefined;
-      return err({ code: 'INTERNAL_ERROR', message });
-    }
+  private async handleReuse(userId: string, jti: string): Promise<Result<TokenPair, AppError>> {
+    this.logger.warn({ event: 'token_reuse_detected', userId, jti });
+    await this.refreshTokenRepo.revokeAllForUser(userId);
+    this.eventBus.publish(new RefreshTokenReusedEvent(userId, jti));
+    return err({ code: 'UNAUTHORIZED', reason: 'token_reuse' });
   }
 }

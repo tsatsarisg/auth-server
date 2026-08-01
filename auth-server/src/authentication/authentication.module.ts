@@ -3,22 +3,23 @@ import { JwtModule } from '@nestjs/jwt';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { IdentityModule } from '../identity/identity.module.js';
-import { UserSchema } from '../identity/shared/adapters/mongo/schemas/user.schema.js';
+import { IdentityModule } from '../identity/index.js';
 import { TokenService } from './shared/token.service.js';
+import { TokenIssuer } from './shared/token-issuer.js';
 import { AuthController } from './shared/auth.controller.js';
+import { AUTH_USER_PORT } from './shared/ports/auth-user.port.js';
+import { IdentityAuthUserAdapter } from './shared/adapters/identity-auth-user.adapter.js';
 import { REFRESH_TOKEN_REPOSITORY } from './shared/ports/refresh-token.repository.js';
 import { RefreshTokenPostgresRepository } from './shared/adapters/postgres/refresh-token.repository.postgres.js';
 import { RefreshTokenMongoRepository } from './shared/adapters/mongo/refresh-token.repository.mongo.js';
+import { RefreshTokenSchema } from './shared/adapters/mongo/schemas/refresh-token.schema.js';
 import { TokenCleanupService } from './shared/token-cleanup.service.js';
 import { ENVS } from '../config/env.js';
 
-import { RegisterUserHandler } from './register/register-user.handler.js';
 import { LoginHandler } from './login/login.handler.js';
 import { RefreshTokenHandler } from './refresh/refresh-token.handler.js';
 import { LogoutHandler } from './logout/logout.handler.js';
 
-import { UserRegisteredAuditHandler } from './register/user-registered.audit-handler.js';
 import { LoginSucceededAuditHandler } from './login/login-succeeded.audit-handler.js';
 import { LoginFailedAuditHandler } from './login/login-failed.audit-handler.js';
 import { RefreshTokenReusedAuditHandler } from './refresh/refresh-token-reused.audit-handler.js';
@@ -26,10 +27,9 @@ import { UserLoggedOutAuditHandler } from './logout/user-logged-out.audit-handle
 
 const isPostgres = ENVS.DB_PROVIDER === 'postgres';
 
-const CommandHandlers = [RegisterUserHandler, LoginHandler, RefreshTokenHandler, LogoutHandler];
+const CommandHandlers = [LoginHandler, RefreshTokenHandler, LogoutHandler];
 
 const EventHandlers = [
-  UserRegisteredAuditHandler,
   LoginSucceededAuditHandler,
   LoginFailedAuditHandler,
   RefreshTokenReusedAuditHandler,
@@ -41,13 +41,18 @@ const EventHandlers = [
     CqrsModule,
     IdentityModule,
     JwtModule.register({}),
-    ...(isPostgres ? [] : [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }])]),
+    ...(isPostgres ? [] : [MongooseModule.forFeature([{ name: 'RefreshToken', schema: RefreshTokenSchema }])]),
   ],
   providers: [
     TokenService,
+    TokenIssuer,
     {
       provide: REFRESH_TOKEN_REPOSITORY,
       useClass: isPostgres ? RefreshTokenPostgresRepository : RefreshTokenMongoRepository,
+    },
+    {
+      provide: AUTH_USER_PORT,
+      useClass: IdentityAuthUserAdapter,
     },
     ...CommandHandlers,
     ...EventHandlers,

@@ -15,26 +15,27 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import {
-  RegisterSchema,
-  type RegisterDto,
-  LoginSchema,
-  type LoginDto,
-} from '../../identity/shared/dtos/register.dto.js';
-import { RegisterUserCommand } from '../register/register-user.command.js';
+import { RegisterUserCommand, RegisterSchema, type RegisterDto } from '../../identity/index.js';
+import { LoginSchema, type LoginDto } from '../login/login.schema.js';
 import { LoginCommand } from '../login/login.command.js';
 import { RefreshTokenCommand } from '../refresh/refresh-token.command.js';
 import { LogoutCommand } from '../logout/logout.command.js';
+import { REFRESH_TOKEN_TTL_MS } from './token.service.js';
 import { dispatch } from '../../common/cqrs/dispatch.js';
 import { unwrapOrThrow } from '../../common/errors/unwrap-or-throw.js';
 
 const REFRESH_COOKIE_NAME = 'refresh_token';
-const REFRESH_COOKIE_OPTIONS = {
+// clearCookie must receive the exact same attributes minus maxAge — Express
+// derives `expires` from maxAge, which would stop the cookie being cleared.
+const REFRESH_COOKIE_BASE = {
   httpOnly: true,
   secure: true,
   sameSite: 'strict' as const,
   path: '/api/v1/auth',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+const REFRESH_COOKIE_OPTIONS = {
+  ...REFRESH_COOKIE_BASE,
+  maxAge: REFRESH_TOKEN_TTL_MS,
 };
 
 @ApiTags('Auth')
@@ -102,12 +103,7 @@ export class AuthController {
 
     const result = unwrapOrThrow(await dispatch(this.commandBus, new LogoutCommand(userId)));
 
-    res.clearCookie(REFRESH_COOKIE_NAME, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      path: '/api/v1/auth',
-    });
+    res.clearCookie(REFRESH_COOKIE_NAME, REFRESH_COOKIE_BASE);
 
     return result;
   }

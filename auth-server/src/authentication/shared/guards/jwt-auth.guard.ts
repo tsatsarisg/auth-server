@@ -19,16 +19,11 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = this.tokenService.verifyAccessToken(token);
-
-      if (payload.type !== 'access') {
-        throw new UnauthorizedException('Invalid token type: expected access token');
-      }
-
-      request.user = payload;
+      // verifyAccessToken validates signature, algorithm, and claim shape
+      // (including type === 'access') and throws on any mismatch.
+      request.user = this.tokenService.verifyAccessToken(token);
       return true;
-    } catch (e: unknown) {
-      if (e instanceof UnauthorizedException) throw e;
+    } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
   }

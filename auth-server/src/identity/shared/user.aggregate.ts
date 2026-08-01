@@ -4,10 +4,10 @@ export class User {
   private constructor(
     private readonly _id: string,
     private readonly _email: Email,
-    private _passwordHash: string,
-    private _isEmailVerified: boolean,
+    private readonly _passwordHash: string,
+    private readonly _isEmailVerified: boolean,
     private readonly _createdAt: Date,
-    private _updatedAt: Date,
+    private readonly _updatedAt: Date,
   ) {}
 
   static register(id: string, email: string, passwordHash: string): User {
@@ -56,15 +56,5 @@ export class User {
 
   get updatedAt(): Date {
     return this._updatedAt;
-  }
-
-  verifyEmail(): void {
-    this._isEmailVerified = true;
-    this._updatedAt = new Date();
-  }
-
-  changePassword(newHashedPassword: string): void {
-    this._passwordHash = newHashedPassword;
-    this._updatedAt = new Date();
   }
 }

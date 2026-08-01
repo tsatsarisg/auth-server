@@ -1,10 +1,10 @@
 # Auth Server
 
+[![CI](https://github.com/tsatsarisg/auth-server/actions/workflows/ci.yml/badge.svg)](https://github.com/tsatsarisg/auth-server/actions/workflows/ci.yml)
+
 **Production-reference authentication server built with NestJS, TypeScript, and clean architecture.**
 
-> **License: Source Available -- View Only.**
-> This project is proprietary. You may view the source code for reference purposes only.
-> See [LICENSE](./LICENSE) for full terms.
+> Source-available for viewing and local evaluation. See [License](#license) for terms.
 
 ---
 
@@ -14,11 +14,51 @@ Auth Server is a production-grade authentication service demonstrating clean arc
 
 The architecture follows a vertical slice approach inspired by Greg Young's CQRS and domain modeling patterns. Each use case (register, login, refresh, logout) is an isolated vertical slice with its own command, handler, and domain events. Cross-cutting concerns like encryption, persistence, and logging are separated through ports and adapters, keeping the domain logic free of infrastructure dependencies.
 
-The codebase is organized into two bounded contexts -- **Identity** (user management, password hashing, persistence) and **Authentication** (token issuance, rotation, revocation, session lifecycle). Communication between contexts flows through well-defined ports, making each context independently testable and replaceable.
+The codebase is organized into two bounded contexts -- **Identity** (user registration, password hashing, user persistence) and **Authentication** (token issuance, rotation, revocation, session lifecycle). The dependency between them is strictly one-directional: Authentication consumes Identity through a narrow port (`AuthUserPort`) implemented by a translating adapter over Identity's public surface (`identity/index.ts`). Identity has no knowledge of Authentication, and the boundary is machine-enforced with ESLint import rules.
 
 ---
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    client([Client])
+
+    subgraph authentication["Authentication context"]
+        controller[AuthController]
+        bus{{CommandBus}}
+        login[LoginHandler]
+        refresh[RefreshTokenHandler]
+        logout[LogoutHandler]
+        issuer[TokenIssuer]
+        auport[/"AuthUserPort"/]
+        adapter[IdentityAuthUserAdapter]
+        rtport[/"RefreshTokenRepository port"/]
+    end
+
+    subgraph identity["Identity context"]
+        register[RegisterUserHandler]
+        usersvc[UserService]
+        urport[/"UserRepository port"/]
+        hasher[/"PasswordHasher port"/]
+    end
+
+    rtdb[("refresh_tokens<br/>(Postgres / Mongo / in-memory)")]
+    udb[("users<br/>(Postgres / Mongo / in-memory)")]
+
+    client --> controller --> bus
+    bus --> login & refresh & logout & register
+    login --> auport
+    auport -.implemented by.-> adapter --> usersvc
+    login & refresh --> issuer --> rtport
+    logout --> rtport
+    register --> usersvc
+    usersvc --> urport & hasher
+    rtport --> rtdb
+    urport --> udb
+```
+
+The dependency between contexts runs one way: Authentication → Identity, through `AuthUserPort` and Identity's public surface only. Key decisions are recorded as ADRs in [`docs/adr/`](./docs/adr/): [dual-database adapters](./docs/adr/0001-dual-database-adapters.md), [CQRS with vertical slices](./docs/adr/0002-cqrs-vertical-slices.md), and [encrypting password hashes at rest](./docs/adr/0003-encrypting-password-hashes-at-rest.md).
 
 ### Vertical Slice Organization
 
@@ -26,15 +66,16 @@ Each feature is a self-contained slice with its own command/query, handler, and 
 
 ### Bounded Contexts
 
-- **Identity** -- Owns the user aggregate, email/password value objects, password hashing strategy, and user persistence.
-- **Authentication** -- Owns token issuance, refresh token rotation, reuse detection, logout, and scheduled cleanup.
+- **Identity** -- Owns the user aggregate, email/password value objects, password hashing strategy, user persistence, and the register use case.
+- **Authentication** -- Owns token issuance, refresh token rotation, reuse detection, logout, scheduled cleanup, and refresh-token persistence (its own table in PostgreSQL, its own collection in MongoDB).
 
 ### Patterns
 
-- **CQRS** -- Commands mutate state (register, login, refresh, logout); queries read state (find user by email). Dispatched via NestJS `CommandBus` and `QueryBus`.
+- **CQRS** -- Commands mutate state (register, login, refresh, logout), dispatched via NestJS `CommandBus` with compile-time-typed results.
 - **Ports and Adapters** -- Domain logic depends on port interfaces (`UserRepository`, `PasswordHasher`, `RefreshTokenRepository`). Concrete adapters (Postgres, MongoDB) are injected at the module level.
 - **Domain Events** -- Each use case emits domain events (`UserRegistered`, `LoginSucceeded`, `RefreshTokenReused`, `UserLoggedOut`) consumed by audit handlers for structured logging.
 - **Result Type** -- Business operations return `Result<T, E>` (via neverthrow) instead of throwing exceptions, keeping error handling explicit in the domain layer.
+- **Enforced boundaries** -- ESLint `no-restricted-imports` rules make the context dependency direction checkable in CI: Identity may never import Authentication; Authentication may import Identity only via its public surface.
 
 ## Features
 
@@ -151,6 +192,17 @@ docker compose -f infra/docker/docker-compose.dev.yml up
 
 ---
 
+## Testing
+
+Both suites run against in-memory implementations of the repository ports — the same seam the Postgres and Mongo adapters plug into — so no database is needed.
+
+- **Unit tests** (`pnpm --filter auth-server run test`) cover the security-critical seams: refresh rotation with reuse detection and the concurrent double-spend race, typed token claims (wrong-type and missing-claim rejection), scrypt hashing including the legacy format, AES-GCM encryption and tamper detection, email normalization, credential verification with timing equalization, and the `Result` → HTTP error mapping.
+- **End-to-end tests** (`pnpm --filter auth-server run test:e2e`) drive the full HTTP lifecycle: register → duplicate conflict → login (case-insensitive) → refresh rotation → replay detection → family-wide revocation → logout with cookie clearing.
+
+CI runs lint, format check, typecheck, both test suites, and the build on every push and pull request.
+
+---
+
 ## Docker
 
 ### Development
@@ -246,6 +298,6 @@ Root-level convenience scripts:
 
 ## License
 
-This project is **proprietary and source-available for viewing purposes only**. You may not use, copy, modify, or distribute the code. See the [LICENSE](./LICENSE) file for full terms.
+This project is **proprietary and source-available**. You may view the code, and prospective employers or clients may clone, build, and run it locally to evaluate the author's work. Any other use, copying, modification, or distribution is not permitted. See the [LICENSE](./LICENSE) file for full terms.
 
 Copyright (c) 2025-present George. All rights reserved.

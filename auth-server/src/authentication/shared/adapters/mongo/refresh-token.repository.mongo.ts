@@ -2,68 +2,56 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import type { RefreshTokenRepository, StoredRefreshToken } from '../../ports/refresh-token.repository.js';
-import type { UserMongoDocument } from '../../../../identity/shared/adapters/mongo/schemas/user.schema.js';
+import { type RefreshTokenDocument, type RefreshTokenMongoDocument } from './schemas/refresh-token.schema.js';
 
 @Injectable()
 export class RefreshTokenMongoRepository implements RefreshTokenRepository {
-  constructor(@InjectModel('User') private readonly userModel: Model<UserMongoDocument>) {}
+  constructor(@InjectModel('RefreshToken') private readonly tokenModel: Model<RefreshTokenMongoDocument>) {}
 
   async store(userId: string, token: { jti: string; hash: string; expiresAt: Date }): Promise<void> {
-    await this.userModel
-      .findByIdAndUpdate(
-        userId,
-        {
-          $push: {
-            refreshTokens: {
-              jti: token.jti,
-              hash: token.hash,
-              expiresAt: token.expiresAt,
-              revoked: false,
-              createdAt: new Date(),
-            },
-          },
-        },
-        { new: true },
-      )
-      .exec();
+    await this.tokenModel.create({
+      userId,
+      jti: token.jti,
+      hash: token.hash,
+      expiresAt: token.expiresAt,
+      revoked: false,
+    });
   }
 
   async findByJti(jti: string): Promise<StoredRefreshToken | null> {
-    const doc = await this.userModel.findOne({ 'refreshTokens.jti': jti }, { 'refreshTokens.$': 1 }).exec();
-    if (!doc || !doc.refreshTokens || doc.refreshTokens.length === 0) return null;
-    const rt = doc.refreshTokens[0];
-    if (!rt) return null;
-    return {
-      userId: String(doc._id),
-      jti: rt.jti,
-      hash: rt.hash,
-      expiresAt: rt.expiresAt,
-      revoked: rt.revoked,
-    };
+    const doc = await this.tokenModel.findOne({ jti }).exec();
+    if (!doc) return null;
+    return this.toStored(doc);
   }
 
-  async revoke(jti: string): Promise<void> {
-    await this.userModel.updateOne({ 'refreshTokens.jti': jti }, { $set: { 'refreshTokens.$.revoked': true } }).exec();
+  async claim(jti: string): Promise<StoredRefreshToken | null> {
+    // findOneAndUpdate is atomic per document: of two concurrent claims for
+    // the same jti, only one matches revoked=false; the loser gets null.
+    const doc = await this.tokenModel
+      .findOneAndUpdate({ jti, revoked: false }, { $set: { revoked: true } }, { new: false })
+      .exec();
+    if (!doc) return null;
+    return { ...this.toStored(doc), revoked: true };
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.userModel.updateOne({ _id: userId }, { $set: { 'refreshTokens.$[].revoked': true } }).exec();
+    await this.tokenModel.updateMany({ userId }, { $set: { revoked: true } }).exec();
   }
 
   async deleteExpiredAndRevoked(): Promise<number> {
-    const now = new Date();
-    const result = await this.userModel
-      .updateMany(
-        {},
-        {
-          $pull: {
-            refreshTokens: {
-              $or: [{ revoked: true }, { expiresAt: { $lt: now } }],
-            },
-          } as any,
-        },
-      )
+    const result = await this.tokenModel
+      .deleteMany({ $or: [{ revoked: true }, { expiresAt: { $lt: new Date() } }] })
       .exec();
-    return result.modifiedCount;
+    return result.deletedCount;
+  }
+
+  private toStored(doc: RefreshTokenDocument): StoredRefreshToken {
+    return {
+      userId: doc.userId,
+      jti: doc.jti,
+      hash: doc.hash,
+      expiresAt: doc.expiresAt,
+      revoked: doc.revoked,
+    };
   }
 }

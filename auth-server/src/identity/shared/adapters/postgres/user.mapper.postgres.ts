@@ -1,23 +1,32 @@
+import { Injectable } from '@nestjs/common';
 import { User } from '../../user.aggregate.js';
 import { type UserRecord, type NewUserRecord } from './schema/user.schema.js';
+import { Encryptor } from '../../../../encryption/encryptor.js';
 
+/**
+ * Owns the at-rest encryption policy: domain objects always carry the
+ * plaintext scrypt hash, persistence records always carry the encrypted form.
+ */
+@Injectable()
 export class UserPostgresMapper {
-  static toDomain(record: UserRecord): User {
+  constructor(private readonly encryptor: Encryptor) {}
+
+  toDomain(record: UserRecord): User {
     return User.reconstitute({
       id: record.id,
       email: record.email,
-      passwordHash: record.passwordHash,
+      passwordHash: this.encryptor.decrypt(record.passwordHash),
       isEmailVerified: record.isEmailVerified,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  static toPersistence(user: User): NewUserRecord {
+  toPersistence(user: User): NewUserRecord {
     return {
       id: user.id,
       email: user.email,
-      passwordHash: user.passwordHash,
+      passwordHash: this.encryptor.encrypt(user.passwordHash),
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

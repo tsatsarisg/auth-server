@@ -16,15 +16,6 @@ export class UserDocument {
   @Prop({ type: Boolean, default: false })
   isEmailVerified!: boolean;
 
-  @Prop({ type: Array, default: [] })
-  refreshTokens?: Array<{
-    jti: string;
-    hash: string;
-    expiresAt: Date;
-    revoked?: boolean;
-    createdAt?: Date;
-  }>;
-
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -54,4 +54,50 @@ export default tseslint.config(
       'no-console': 'warn',
     },
   },
+
+  // Bounded-context boundaries. The dependency direction is one-way:
+  // Authentication (consumer) -> Identity (supplier), and only through
+  // Identity's public surface. Identity knows nothing about Authentication.
+  {
+    files: ['src/identity/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/authentication/**'],
+              message: 'Identity must not depend on the Authentication context.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/authentication/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // File-scoped pattern (not **/identity/**) so the negated
+              // exceptions can re-include: gitignore semantics cannot
+              // re-include a file under an excluded directory.
+              group: [
+                '**/identity/**/*.js',
+                '!**/identity/index.js',
+                // The refresh_tokens table references users.id; importing the
+                // table definition for the FK is the single allowed exception.
+                '!**/identity/shared/adapters/postgres/schema/user.schema.js',
+              ],
+              message:
+                'Authentication may import Identity only via its public surface (identity/index.js).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
