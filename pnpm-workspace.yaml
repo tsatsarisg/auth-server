@@ -13,13 +13,19 @@ packages:
 # (the 2026-08-04 keyv/Shai-Hulud attack was flagged within hours).
 minimumReleaseAge: 10080
 
-# Dependency lifecycle scripts (postinstall etc.) are blocked except
-# for this explicit allowlist.
+# Dependency lifecycle scripts (postinstall etc.) are blocked. Every
+# entry below was audited and none is required, so all are false:
+#   @nestjs/core  → prints an OpenCollective funding banner
+#   @scarf/scarf  → install-analytics telemetry — never build
+#   esbuild       → swaps its JS shim for the native binary; a startup
+#                   optimization only — the shim falls back to the
+#                   @esbuild/* platform packages
+#   unrs-resolver → no-op check when prebuilt bindings exist
 allowBuilds:
-  '@nestjs/core': true
-  '@scarf/scarf': false # install-analytics telemetry — never build
-  esbuild: true
-  unrs-resolver: true
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  esbuild: false
+  unrs-resolver: false
 
 # Transitive dependencies must resolve from the registry — never from
 # git/tarball/URL sources injected by a compromised intermediate.
