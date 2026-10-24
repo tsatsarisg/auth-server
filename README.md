@@ -106,7 +106,7 @@ Each feature is a self-contained slice with its own command/query, handler, and 
 | --------------- | ------------------------------------------ |
 | Runtime         | Node.js 24 LTS                             |
 | Framework       | NestJS 12                                  |
-| Language        | TypeScript 6.0.3 (strict mode)             |
+| Language        | TypeScript 7.0.2 (strict mode)             |
 | Databases       | PostgreSQL 17, MongoDB 8                   |
 | ORM             | Drizzle ORM (Postgres), Mongoose (MongoDB) |
 | Auth            | JWT with HS256, separate signing keys      |

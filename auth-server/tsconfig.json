@@ -17,10 +17,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
 
     // Emit options
-    "declaration": true,
     "removeComments": true,
     "sourceMap": true,
     "outDir": "./dist",

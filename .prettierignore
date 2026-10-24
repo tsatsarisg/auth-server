@@ -3,3 +3,4 @@ pnpm-lock.yaml
 **/dist
 **/coverage
 auth-server/drizzle
+**/dist-test

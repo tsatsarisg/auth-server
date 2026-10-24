@@ -56,8 +56,6 @@ services:
     restart: unless-stopped
     env_file:
       - ../envs/.env.dev
-    environment:
-      - CHOKIDAR_USEPOLLING=true
     ports:
       - "127.0.0.1:3000:3000"
     volumes:

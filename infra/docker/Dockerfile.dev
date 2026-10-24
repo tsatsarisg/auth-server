@@ -16,5 +16,6 @@ COPY --chown=node:node auth-server/package.json ./auth-server/
 RUN pnpm install --frozen-lockfile --offline
 # Only src is replaced by a read-only bind mount during normal development.
 COPY --chown=node:node auth-server/ ./auth-server/
+COPY --chown=node:node tools/ ./tools/
 EXPOSE 3000
 CMD ["pnpm", "--filter", "auth-server", "start:dev"]

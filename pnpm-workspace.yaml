@@ -11,6 +11,10 @@ savePrefix: ""
 engineStrict: true
 resolutionMode: highest
 injectWorkspacePackages: true
+# Explicitly declare required peers; unused optional compiler peers must not pull older toolchains.
+autoInstallPeers: false
+# Root tools are not application runtime peers (Swagger's optional TS plugin is unused).
+resolvePeersFromWorkspaceRoot: false
 
 # Refuse any version published to the registry less than 7 days ago,
 # giving the ecosystem time to detect and unpublish malicious releases
@@ -26,7 +30,7 @@ minimumReleaseAge: 10080
 #                   @esbuild/* platform packages
 #   unrs-resolver → no-op check when prebuilt bindings exist
 allowBuilds:
-  # Prebuilt optional native packages are available; no source compilation needed.
+  # Jest's watcher uses prebuilt optional binaries; source compilation is unnecessary.
   "@parcel/watcher": false
   "@nestjs/core": false
   "@scarf/scarf": false

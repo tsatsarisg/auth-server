@@ -1,13 +1,19 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "oxc", "unicorn"],
-  "categories": { "correctness": "error" },
-  "env": { "node": true, "jest": true },
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "node": true,
+    "jest": true
+  },
   "ignorePatterns": [
     "**/node_modules/**",
     "**/dist/**",
     "**/coverage/**",
-    "auth-server/drizzle/**"
+    "auth-server/drizzle/**",
+    "**/dist-test/**"
   ],
   "rules": {
     "typescript/no-floating-promises": "error",
@@ -23,7 +29,10 @@
     "no-console": "error",
     "no-unused-vars": [
       "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
     ]
   },
   "overrides": [

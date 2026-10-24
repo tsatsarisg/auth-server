@@ -16,15 +16,25 @@ the pnpm workspace root and upgrades eligible dependencies. The nested
   exceptions were introduced. See [pnpm guidance](https://pnpm.io/supply-chain-security).
 - Shared Oxlint, TypeScript, Node types and Prettier dependencies live at the
   root. Application dependencies remain in the application package. The
-  TypeScript compiler stays on 6.0.3 because ts-jest does not support TypeScript
-  7; Node typings stay on the selected LTS major.
+  TypeScript is pinned to the current stable 7.0.2 native compiler; Node typings
+  stay on the selected LTS major. Both application and test output use this
+  compiler, preserving Nest's decorator metadata without a Jest transformer.
+  Jest runs the emitted JavaScript and uses V8 coverage mapped back to TypeScript.
+  Required peers are declared explicitly, and root-only tools do not resolve as
+  application peers. This leaves unused optional Swagger/Jest compiler plugins
+  uninstalled, with no peer-version overrides or ignored peer warnings.
 - `pnpm check` runs typecheck, type-aware linting, formatting, architecture
   checks, unit tests, HTTP lifecycle tests and the application build. The
   Identity/Authentication import restrictions and PostgreSQL foreign-key
   exception are preserved and verified by four regression tests.
 - Nest packages move to their eligible 12.x versions. Jest uses Node's
-  `--experimental-vm-modules` support to load Nest's ESM packages. Explicit
-  TypeScript source roots preserve the `dist/main.js` runtime entrypoint.
+  `--experimental-vm-modules` support to load Nest's ESM packages. Removed
+  `ts-jest`, the Nest CLI and schematics, `ts-loader`, `ts-node`, `tsconfig-paths`
+  and `source-map-support`; the CLI's embedded older TypeScript is no longer
+  needed. Built-in Node source maps and watch mode preserve debugging and live
+  development. Explicit source roots preserve `dist/main.js`. Test output is
+  isolated in `dist-test`; build/test compilation cleans its own output first.
+  `dotenv` moves to development dependencies because only Drizzle's config uses it.
 - Removed unsupported MongoDB connection options, corrected health checks to use
   Nest's actual MongoDB connection, and declared Express directly,
   since `main.ts` imports it. Replaced the untyped logout request and removed two
@@ -35,18 +45,16 @@ the pnpm workspace root and upgrades eligible dependencies. The nested
 ## Dependency audit and remaining issues
 
 The full npm audit drops from **48 advisories** (3 critical, 25 high, 14 moderate,
-6 low) to **6** (0 critical, 2 high, 2 moderate, 2 low).
+6 low) to **2 high** advisories (0 critical, moderate or low). Removing the
+redundant compiler stack also removes all four development-only fast-uri findings.
 
-| Package     | Installed | Remaining finding                                        | Follow-up                                        |
-| ----------- | --------- | -------------------------------------------------------- | ------------------------------------------------ |
-| body-parser | 2.3.0     | High, GHSA-27r3-jxmh-p828 / CVE-2026-111181              | Upgrade to 2.4.0 after October 29, 11:39:39 UTC. |
-| multer      | 2.4.0     | High, GHSA-q7qp-rjg7-q26m / CVE-2026-113872              | Upgrade to 2.5.0 after October 29, 11:58:47 UTC. |
-| fast-uri    | 3.1.8     | Development tooling: two moderate and two low advisories | 3.1.9 becomes eligible October 26, 23:05:27 UTC. |
+| Package     | Installed | Remaining finding                           | Follow-up                                        |
+| ----------- | --------- | ------------------------------------------- | ------------------------------------------------ |
+| body-parser | 2.3.0     | High, GHSA-27r3-jxmh-p828 / CVE-2026-111181 | Upgrade to 2.4.0 after October 29, 11:39:39 UTC. |
+| multer      | 2.4.0     | High, GHSA-q7qp-rjg7-q26m / CVE-2026-113872 | Upgrade to 2.5.0 after October 29, 11:58:47 UTC. |
 
-The fast-uri IDs are GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h,
-GHSA-wjr9-j795-jxcr and GHSA-333x-w4r6-6crp. Eligibility dates follow registry
-publication timestamps plus the existing seven-day policy. Reaudit before
-upgrading; no vulnerability exclusions were added.
+Eligibility dates follow registry publication timestamps plus the existing
+seven-day policy. Reaudit before upgrading; no vulnerability exclusions were added.
 
 Retained a targeted, exact esbuild 0.28.2 override for Drizzle's legacy loader;
 without it the loader selects vulnerable esbuild 0.18.20. Drizzle SQL export was
@@ -55,13 +63,16 @@ overrides after refreshing the dependency graph. Drizzle still pulls deprecated
 `@esbuild-kit/core-utils` and `@esbuild-kit/esm-loader`; migration requires an
 upstream tooling change. The existing glob 10.5.0 deprecation also remains.
 
-All **771 packages** passed registry-signature verification, with no missing or
+All **665 packages** passed registry-signature verification, with no missing or
 invalid signatures. An independent review of both lockfile documents checked
-all **376 newly selected versions** for release age, deprecation, registry
+all **324 newly selected versions** for release age, deprecation, registry
 tarball source and integrity hashes. Dependency installation scripts remain
 blocked; the package-manager bootstrap is separately integrity-pinned. These
 checks authenticate artifacts and reduce risk; they cannot establish that every
 package's source is harmless.
+
+The final lockfile contains 106 fewer package versions than the first revision
+of this PR (771 → 665), and 185 fewer than the original main branch (850 → 665).
 
 ## Containers
 
@@ -107,6 +118,9 @@ references and high/critical IDs. Existing production data was not upgraded.
   images on Linux amd64 using immutable action revisions and read-only token
   permissions.
 - Drizzle exports the current PostgreSQL schema successfully.
+- V8 coverage maps emitted JavaScript back to original TypeScript sources. The
+  development container passed a real source-edit/reload check and graceful
+  shutdown under Node's built-in watcher.
 - The production image passed real PostgreSQL and MongoDB health, registration,
   login, refresh rotation, replay rejection, cascade revocation and logout
   checks. Both runs also verified credential redaction, non-root execution and
