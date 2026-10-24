@@ -97,7 +97,10 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Logged out successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseGuards(JwtAuthGuard)
-  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response): Promise<{ message: string }> {
+  async logout(
+    @Req() req: Request & { user?: { sub: string } },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
     const userId = req.user?.sub;
     if (!userId) throw new UnauthorizedException('User not found in token');
 

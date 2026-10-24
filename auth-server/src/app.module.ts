@@ -12,6 +12,7 @@ import { EncryptionModule } from './encryption/encryption.module.js';
 import { HealthModule } from './health/health.module.js';
 import { ENVS } from './config/env.js';
 import type { IncomingMessage } from 'http';
+import { httpLogRedaction } from './common/http-log-redaction.js';
 
 const dbModule = ENVS.DB_PROVIDER === 'postgres' ? DrizzleModule : DatabaseModule;
 
@@ -19,6 +20,7 @@ const dbModule = ENVS.DB_PROVIDER === 'postgres' ? DrizzleModule : DatabaseModul
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
+        redact: httpLogRedaction,
         genReqId: (req: IncomingMessage) => {
           const existing = req.headers['x-request-id'];
           if (typeof existing === 'string' && existing.length > 0) {

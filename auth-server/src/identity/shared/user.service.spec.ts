@@ -1,5 +1,4 @@
 import { UserService } from './user.service.js';
-import { type PasswordHasher } from './ports/password-hasher.js';
 import { InMemoryUserRepository } from './adapters/in-memory/user.repository.in-memory.js';
 
 describe('UserService', () => {
@@ -13,7 +12,7 @@ describe('UserService', () => {
       hash: jest.fn((plain: string) => Promise.resolve(`hashed:${plain}`)),
       compare: jest.fn((plain: string, stored: string) => Promise.resolve(stored === `hashed:${plain}`)),
     };
-    service = new UserService(repo, hasher as unknown as PasswordHasher);
+    service = new UserService(repo, hasher);
   });
 
   it('stores a normalized email and the hashed password on create', async () => {

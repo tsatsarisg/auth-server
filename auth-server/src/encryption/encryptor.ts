@@ -35,7 +35,7 @@ export class Encryptor {
       decipher.setAuthTag(tag);
       const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
       return decrypted.toString('utf8');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // oxlint-disable-next-line no-unused-vars
     } catch (err) {
       throw new InternalServerErrorException('Decryption failed');
     }

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
+import { getConnectionToken } from '@nestjs/mongoose';
+import type { Connection } from 'mongoose';
 import { HealthController } from './health.controller.js';
 import { DB_HEALTH_CHECK, type DbHealthCheck } from './db-health-check.js';
 import { ENVS } from '../config/env.js';
@@ -10,7 +12,8 @@ import { ENVS } from '../config/env.js';
   providers: [
     {
       provide: DB_HEALTH_CHECK,
-      useFactory: async (): Promise<DbHealthCheck> => {
+      inject: ENVS.DB_PROVIDER === 'mongo' ? [getConnectionToken()] : [],
+      useFactory: async (connection?: Connection): Promise<DbHealthCheck> => {
         if (ENVS.DB_PROVIDER === 'postgres') {
           // Dynamic import so mongoose-only deployments never load pg at module scope
           const { pool } = await import('../database/drizzle.provider.js');
@@ -24,9 +27,9 @@ import { ENVS } from '../config/env.js';
           };
         }
 
-        const mongoose = await import('mongoose');
+        if (!connection) throw new Error('MongoDB connection provider is missing');
         return () => {
-          const state = mongoose.default.connection.readyState;
+          const state = connection.readyState;
           if (state !== 1) {
             throw new Error(`Mongoose connection state: ${state}`);
           }

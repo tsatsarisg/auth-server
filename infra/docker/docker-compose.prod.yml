@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine3.24@sha256:eee6c6e1b0894fa4fe0075eb054af9fd1cf39a35321c2d4110626cfe506411fb
     restart: always
     profiles:
       - postgres
@@ -25,7 +25,7 @@ services:
       - auth_network_prod
 
   mongo:
-    image: mongo:8
+    image: mongo:8.0.34@sha256:4a4ab5d4834207389e0d7270fac988e21ffedccecba77991a552f755df229907
     restart: always
     profiles:
       - mongo
@@ -49,6 +49,7 @@ services:
       - auth_network_prod
 
   backend:
+    init: true
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.prod
@@ -57,9 +58,13 @@ services:
     env_file:
       - ../envs/.env.prod
     ports:
-      - "3000:3000"
+      - "${HTTP_BIND_ADDRESS:-127.0.0.1}:3000:3000"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
