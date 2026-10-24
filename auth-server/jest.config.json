@@ -1,0 +1,10 @@
+{
+  "rootDir": "dist-test/src",
+  "testRegex": ".*\\.spec\\.js$",
+  "testEnvironment": "node",
+  "transform": {},
+  "setupFiles": ["<rootDir>/../test/setup-env.js"],
+  "collectCoverageFrom": ["**/*.js", "!**/*.spec.js"],
+  "coverageDirectory": "../../coverage",
+  "coverageProvider": "v8"
+}

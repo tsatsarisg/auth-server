@@ -1,70 +1,32 @@
-# ---- Stage 1: Install dependencies ----
-FROM node:22-alpine AS deps
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
-# Enable corepack for pnpm
-RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
-
-# Install dumb-init for proper PID 1 signal handling
-RUN apk add --no-cache dumb-init
-
+FROM node:24.22.1-alpine3.24@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS dependencies
 WORKDIR /app
+COPY package.json ./
+# Use the single integrity-verified root pin; keep package managers out of runtime.
+RUN corepack enable && corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate \
+    && rm -rf /usr/local/lib/node_modules/npm /opt/yarn* \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN pnpm fetch --store-dir /pnpm/store
+COPY auth-server/package.json ./auth-server/
+RUN pnpm install --frozen-lockfile --offline --store-dir /pnpm/store
 
-# Copy only dependency manifests first for optimal layer caching
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY auth-server/package.json ./auth-server/package.json
-
-# Fetch packages into the store, then install offline for reproducibility
-RUN pnpm fetch --prod && pnpm fetch
-RUN pnpm install --frozen-lockfile --offline
-
-# ---- Stage 2: Build TypeScript ----
-FROM deps AS build
-
+FROM dependencies AS build
 COPY auth-server/ ./auth-server/
+COPY tools/ ./tools/
+RUN pnpm --filter auth-server build
+RUN pnpm --filter auth-server deploy --prod --frozen-lockfile --offline --store-dir /pnpm/store /deploy
 
-RUN pnpm --filter=auth-server run build
-
-# ---- Stage 3: Production dependencies only ----
-FROM node:22-alpine AS prod-deps
-
-RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
-
-WORKDIR /app
-
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY auth-server/package.json ./auth-server/package.json
-
-RUN pnpm fetch --prod
-RUN pnpm install --frozen-lockfile --offline --prod
-
-# ---- Stage 4: Minimal production image ----
-FROM node:22-alpine AS production
-
-# Install dumb-init for proper PID 1 signal handling
-RUN apk add --no-cache dumb-init
-
+FROM node:24.22.1-alpine3.24@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS production
 ENV NODE_ENV=production
-
+RUN rm -rf /usr/local/lib/node_modules /opt/yarn* \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx
 WORKDIR /app
-
-# Copy only production node_modules and built output
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/auth-server/node_modules ./auth-server/node_modules
-COPY --from=build /app/auth-server/dist ./auth-server/dist
-COPY --from=build /app/auth-server/package.json ./auth-server/package.json
-COPY package.json pnpm-workspace.yaml ./
-
-# Run as non-root user for security
-RUN addgroup -g 1001 appgroup && \
-    adduser -u 1001 -G appgroup -s /bin/sh -D appuser && \
-    chown -R appuser:appgroup /app
-
-USER appuser
-
+COPY --from=build --chown=node:node /deploy ./
+USER node
 EXPOSE 3000
-
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "auth-server/dist/main.js"]
+    CMD wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1
+CMD ["node", "--enable-source-maps", "dist/main.js"]

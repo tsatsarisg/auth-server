@@ -55,3 +55,11 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Workspace build outputs and dependencies
+**/node_modules/
+**/dist/
+**/coverage/
+**/*.tsbuildinfo
+infra/envs/.env.prod
+**/dist-test/

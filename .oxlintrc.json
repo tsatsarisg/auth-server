@@ -1,0 +1,76 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "unicorn"],
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "node": true,
+    "jest": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "auth-server/drizzle/**",
+    "**/dist-test/**"
+  ],
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/require-await": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-argument": "off",
+    "no-console": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["auth-server/src/identity/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/authentication/**"],
+                "message": "Identity must not depend on Authentication."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["auth-server/src/authentication/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/identity/**/*.js",
+                  "!**/identity/index.js",
+                  "!**/identity/shared/adapters/postgres/schema/user.schema.js"
+                ],
+                "message": "Import Identity through identity/index.js; only the PostgreSQL foreign-key schema is exempt."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

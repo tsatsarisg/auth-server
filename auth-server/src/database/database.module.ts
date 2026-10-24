@@ -7,9 +7,6 @@ import { ENVS } from '../config/env';
     MongooseModule.forRootAsync({
       useFactory: () => ({
         uri: ENVS.MONGO_URI,
-        // Recommended options
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
         // In production you may want to set autoIndex: false
       }),
       inject: [],

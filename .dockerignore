@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env*
+**/*.log
+.DS_Store
+**/dist-test

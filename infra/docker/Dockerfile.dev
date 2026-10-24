@@ -1,17 +1,21 @@
-FROM node:22-alpine
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
-# Enable corepack for pnpm (no global install needed)
-RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
-
+FROM node:24.22.1-alpine3.24@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53
 WORKDIR /app
-
-# Copy workspace metadata & lockfile for deterministic installs
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY auth-server/package.json ./auth-server/package.json
-
-RUN pnpm install --frozen-lockfile
-
+RUN corepack enable \
+    && rm -rf /usr/local/lib/node_modules/npm /opt/yarn* \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    && chown node:node /app
+USER node
+COPY --chown=node:node package.json ./
+# Prepare the integrity-pinned manager and dependency caches as the runtime user.
+RUN corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate
+COPY --chown=node:node pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN pnpm fetch
+COPY --chown=node:node auth-server/package.json ./auth-server/
+RUN pnpm install --frozen-lockfile --offline
+# Only src is replaced by a read-only bind mount during normal development.
+COPY --chown=node:node auth-server/ ./auth-server/
+COPY --chown=node:node tools/ ./tools/
 EXPOSE 3000
-
-# Default to running the dev watcher for the auth-server workspace package
-CMD ["pnpm", "--filter=auth-server", "run", "start:dev"]
+CMD ["pnpm", "--filter", "auth-server", "start:dev"]

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    // Module system — NestJS 11 supports NodeNext with .js extensions in imports
+    // Module system — NestJS 12 supports NodeNext with .js extensions in imports
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
@@ -17,14 +17,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
 
     // Emit options
-    "declaration": true,
     "removeComments": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "rootDir": ".",
     "incremental": true,
 
     // NestJS decorator support
@@ -36,6 +34,9 @@
     "allowSyntheticDefaultImports": true,
 
     // Performance
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "drizzle.config.ts"],
+  "exclude": ["node_modules", "dist", "coverage", "drizzle"]
 }

@@ -3,16 +3,32 @@
   "version": "0.0.0",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
-  "workspaces": [
-    "auth-server"
-  ],
   "scripts": {
     "dev": "docker compose -f infra/docker/docker-compose.dev.yml up --build",
-    "dev:down": "docker compose -f infra/docker/docker-compose.dev.yml down"
+    "dev:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
+    "lint": "oxlint --type-aware --max-warnings=0 --report-unused-disable-directives .",
+    "lint:fix": "pnpm lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm test:architecture && pnpm -r run test --runInBand",
+    "test:e2e": "pnpm --filter auth-server test:e2e --runInBand",
+    "build": "pnpm -r run build",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:e2e && pnpm build",
+    "audit": "pnpm audit",
+    "deps:check": "pnpm outdated -r",
+    "test:architecture": "node --test tools/architecture.test.mjs"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "pnpm": "11.19.0"
+    "node": ">=24.22.1 <25.0.0",
+    "pnpm": "12.14.0"
   },
-  "packageManager": "pnpm@11.19.0+sha512.7881f3ed590d472c4a955e2b88b2121791116066dcc88cbca3849ec9b60f1bbaa6d2ccb221fa91da4e1c65bef2bcbe379365aea7ac539c7bf86dedc3a1b22dce"
+  "packageManager": "pnpm@12.14.0+sha512.c18ba6d87993d3d164cb5e8948f32b2c06ee854487e06cd8d86781342fb3e5bb4634367034711e86802baa9c37bea906ce1929ad08d70884c97d801df13389a6",
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  }
 }

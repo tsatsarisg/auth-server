@@ -6,109 +6,68 @@
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
-    "node": ">=22.0.0",
-    "pnpm": "11.19.0"
+    "node": ">=24.22.1 <25.0.0",
+    "pnpm": "12.14.0"
   },
-  "packageManager": "pnpm@11.19.0+sha512.7881f3ed590d472c4a955e2b88b2121791116066dcc88cbca3849ec9b60f1bbaa6d2ccb221fa91da4e1c65bef2bcbe379365aea7ac539c7bf86dedc3a1b22dce",
   "scripts": {
-    "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
+    "build": "node ../tools/compile.mjs build",
+    "start": "pnpm build && node --enable-source-maps dist/main.js",
+    "start:dev": "node --watch-path=src --watch-path=tsconfig.json --watch-path=tsconfig.build.json --watch-path=../tools --watch-preserve-output ../tools/watch.mjs app",
+    "start:debug": "node --watch-path=src --watch-path=tsconfig.json --watch-path=tsconfig.build.json --watch-path=../tools --watch-preserve-output ../tools/watch.mjs debug",
+    "start:prod": "node --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test": "pnpm test:compile && node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.json",
+    "test:watch": "node --watch-path=src --watch-path=test --watch-path=tsconfig.json --watch-path=tsconfig.test.json --watch-path=../tools --watch-preserve-output ../tools/watch.mjs tests",
+    "test:cov": "pnpm test --coverage",
+    "test:debug": "pnpm test:compile && node --inspect-brk --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.json --runInBand",
+    "test:e2e": "pnpm test:compile && node --experimental-vm-modules node_modules/jest/bin/jest.js --config test/jest-e2e.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "audit": "pnpm audit",
-    "audit:fix": "pnpm audit --fix",
-    "deps:check": "pnpm outdated"
+    "deps:check": "pnpm outdated",
+    "test:compile": "node ../tools/compile.mjs tests"
   },
   "dependencies": {
-    "@nestjs/common": "11.1.18",
-    "@nestjs/core": "11.1.18",
-    "@nestjs/cqrs": "11.0.3",
-    "@nestjs/jwt": "11.0.2",
-    "@nestjs/mongoose": "11.0.4",
-    "@nestjs/platform-express": "11.1.18",
-    "@nestjs/schedule": "6.1.1",
-    "@nestjs/swagger": "11.2.6",
-    "@nestjs/terminus": "11.1.1",
-    "@nestjs/throttler": "6.5.0",
+    "@nestjs/common": "12.1.3",
+    "@nestjs/core": "12.1.3",
+    "@nestjs/cqrs": "12.1.0",
+    "@nestjs/jwt": "12.0.3",
+    "@nestjs/mongoose": "12.0.0",
+    "@nestjs/platform-express": "12.1.3",
+    "@nestjs/schedule": "12.0.2",
+    "@nestjs/swagger": "12.0.2",
+    "@nestjs/terminus": "12.1.0",
+    "@nestjs/throttler": "6.7.1",
     "cookie-parser": "1.4.7",
-    "dotenv": "17.4.0",
-    "drizzle-orm": "0.45.2",
-    "helmet": "8.1.0",
-    "mongoose": "9.4.1",
-    "nestjs-pino": "4.6.1",
+    "drizzle-orm": "0.45.4",
+    "helmet": "8.3.0",
+    "mongoose": "9.11.2",
+    "nestjs-pino": "5.3.1",
     "neverthrow": "8.2.0",
-    "pg": "8.20.0",
-    "pino": "10.3.1",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
     "pino-http": "11.0.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "zod": "4.3.6"
+    "zod": "4.6.7",
+    "express": "5.3.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "3.3.5",
-    "@eslint/js": "10.0.1",
-    "@nestjs/cli": "11.0.17",
-    "@nestjs/schematics": "11.0.10",
-    "@nestjs/testing": "11.1.18",
+    "@nestjs/testing": "12.1.3",
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
-    "@types/node": "25.5.2",
-    "@types/pg": "8.20.0",
-    "@types/supertest": "7.2.0",
-    "drizzle-kit": "0.31.10",
-    "eslint": "10.2.0",
-    "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-prettier": "5.5.5",
-    "globals": "17.4.0",
-    "jest": "30.3.0",
-    "pino-pretty": "13.1.3",
-    "prettier": "3.8.1",
-    "source-map-support": "0.5.21",
-    "supertest": "7.2.2",
-    "ts-jest": "29.4.9",
-    "ts-loader": "9.5.7",
-    "ts-node": "10.9.2",
-    "tsconfig-paths": "4.2.0",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.58.0"
+    "@types/pg": "8.23.1",
+    "@types/supertest": "7.2.1",
+    "drizzle-kit": "0.31.11",
+    "jest": "30.5.2",
+    "pino-pretty": "13.2.0",
+    "supertest": "7.3.1",
+    "dotenv": "18.0.8"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    },
-    "setupFiles": [
-      "<rootDir>/../test/setup-env.ts"
-    ],
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
-  }
+  "files": [
+    "dist"
+  ]
 }

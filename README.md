@@ -14,7 +14,7 @@ Auth Server is a production-grade authentication service demonstrating clean arc
 
 The architecture follows a vertical slice approach inspired by Greg Young's CQRS and domain modeling patterns. Each use case (register, login, refresh, logout) is an isolated vertical slice with its own command, handler, and domain events. Cross-cutting concerns like encryption, persistence, and logging are separated through ports and adapters, keeping the domain logic free of infrastructure dependencies.
 
-The codebase is organized into two bounded contexts -- **Identity** (user registration, password hashing, user persistence) and **Authentication** (token issuance, rotation, revocation, session lifecycle). The dependency between them is strictly one-directional: Authentication consumes Identity through a narrow port (`AuthUserPort`) implemented by a translating adapter over Identity's public surface (`identity/index.ts`). Identity has no knowledge of Authentication, and the boundary is machine-enforced with ESLint import rules.
+The codebase is organized into two bounded contexts -- **Identity** (user registration, password hashing, user persistence) and **Authentication** (token issuance, rotation, revocation, session lifecycle). The dependency between them is strictly one-directional: Authentication consumes Identity through a narrow port (`AuthUserPort`) implemented by a translating adapter over Identity's public surface (`identity/index.ts`). Identity has no knowledge of Authentication, and the boundary is machine-enforced with Oxlint import rules.
 
 ---
 
@@ -75,7 +75,7 @@ Each feature is a self-contained slice with its own command/query, handler, and 
 - **Ports and Adapters** -- Domain logic depends on port interfaces (`UserRepository`, `PasswordHasher`, `RefreshTokenRepository`). Concrete adapters (Postgres, MongoDB) are injected at the module level.
 - **Domain Events** -- Each use case emits domain events (`UserRegistered`, `LoginSucceeded`, `RefreshTokenReused`, `UserLoggedOut`) consumed by audit handlers for structured logging.
 - **Result Type** -- Business operations return `Result<T, E>` (via neverthrow) instead of throwing exceptions, keeping error handling explicit in the domain layer.
-- **Enforced boundaries** -- ESLint `no-restricted-imports` rules make the context dependency direction checkable in CI: Identity may never import Authentication; Authentication may import Identity only via its public surface.
+- **Enforced boundaries** -- Oxlint `no-restricted-imports` rules make the context dependency direction checkable in CI: Identity may never import Authentication; Authentication may import Identity only via its public surface.
 
 ## Features
 
@@ -102,21 +102,21 @@ Each feature is a self-contained slice with its own command/query, handler, and 
 
 ## Tech Stack
 
-| Category        | Technology                             |
-| --------------- | -------------------------------------- |
-| Runtime         | Node.js 22 LTS                         |
-| Framework       | NestJS 11                              |
-| Language        | TypeScript 5.7+ (strict mode)          |
-| Databases       | PostgreSQL 17, MongoDB 8               |
+| Category        | Technology                                 |
+| --------------- | ------------------------------------------ |
+| Runtime         | Node.js 24 LTS                             |
+| Framework       | NestJS 12                                  |
+| Language        | TypeScript 7.0.2 (strict mode)             |
+| Databases       | PostgreSQL 17, MongoDB 8                   |
 | ORM             | Drizzle ORM (Postgres), Mongoose (MongoDB) |
-| Auth            | JWT with HS256, separate signing keys  |
-| Validation      | Zod                                    |
-| Logging         | Pino (structured JSON, pino-pretty dev)|
-| API Docs        | Swagger / OpenAPI 3.0                  |
-| Containers      | Docker, Docker Compose                 |
-| Package Manager | pnpm 10                                |
-| Linting         | ESLint 10 (flat config), Prettier      |
-| Testing         | Jest, Supertest                        |
+| Auth            | JWT with HS256, separate signing keys      |
+| Validation      | Zod                                        |
+| Logging         | Pino (structured JSON, pino-pretty dev)    |
+| API Docs        | Swagger / OpenAPI 3.0                      |
+| Containers      | Docker, Docker Compose                     |
+| Package Manager | pnpm 12.14.0                               |
+| Linting         | Oxlint (type-aware), Prettier              |
+| Testing         | Jest, Supertest                            |
 
 ---
 
@@ -124,8 +124,8 @@ Each feature is a self-contained slice with its own command/query, handler, and 
 
 ### Prerequisites
 
-- Node.js 22+ (LTS)
-- pnpm 10+
+- Node.js 24.22.1 (LTS)
+- pnpm 12.14.0 (integrity-pinned)
 - Docker and Docker Compose
 
 ### Setup
@@ -199,7 +199,7 @@ Both suites run against in-memory implementations of the repository ports — th
 - **Unit tests** (`pnpm --filter auth-server run test`) cover the security-critical seams: refresh rotation with reuse detection and the concurrent double-spend race, typed token claims (wrong-type and missing-claim rejection), scrypt hashing including the legacy format, AES-GCM encryption and tamper detection, email normalization, credential verification with timing equalization, and the `Result` → HTTP error mapping.
 - **End-to-end tests** (`pnpm --filter auth-server run test:e2e`) drive the full HTTP lifecycle: register → duplicate conflict → login (case-insensitive) → refresh rotation → replay detection → family-wide revocation → logout with cookie clearing.
 
-CI runs lint, format check, typecheck, both test suites, and the build on every push and pull request.
+CI runs `pnpm check` and builds both Docker images on every push and pull request. Use `corepack enable` and `corepack install` to activate the exact pnpm pin. The workspace keeps exact direct versions, a seven-day release quarantine, blocked dependency lifecycle scripts, registry-only transitive dependencies and provenance downgrade protection. See [the tooling review](docs/tooling-security-review.md) for remaining advisories and upgrade decisions.
 
 ---
 
@@ -233,66 +233,66 @@ Production builds use multi-stage Dockerfiles for minimal image size.
 
 ## API Endpoints
 
-| Method | Endpoint               | Description                          | Auth Required |
-| ------ | ---------------------- | ------------------------------------ | ------------- |
-| POST   | `/api/v1/auth/register`| Register a new user                  | No            |
-| POST   | `/api/v1/auth/login`   | Authenticate and receive tokens      | No            |
-| POST   | `/api/v1/auth/refresh` | Rotate refresh token, get new access | Cookie        |
-| POST   | `/api/v1/auth/logout`  | Revoke all refresh tokens            | Bearer token  |
-| GET    | `/health`              | Health check with DB status          | No            |
-| GET    | `/docs`                | Swagger UI                           | No            |
+| Method | Endpoint                | Description                          | Auth Required |
+| ------ | ----------------------- | ------------------------------------ | ------------- |
+| POST   | `/api/v1/auth/register` | Register a new user                  | No            |
+| POST   | `/api/v1/auth/login`    | Authenticate and receive tokens      | No            |
+| POST   | `/api/v1/auth/refresh`  | Rotate refresh token, get new access | Cookie        |
+| POST   | `/api/v1/auth/logout`   | Revoke all refresh tokens            | Bearer token  |
+| GET    | `/health`               | Health check with DB status          | No            |
+| GET    | `/docs`                 | Swagger UI                           | No            |
 
 ---
 
 ## Project Scripts
 
-All scripts are scoped to the `auth-server` workspace. Run with `pnpm --filter auth-server run <script>`.
+Run `pnpm check` from the repository root for typecheck, type-aware Oxlint, formatting, architecture rules, unit/e2e tests and the build. Shared tooling lives at the workspace root; application-specific scripts also support `pnpm --filter auth-server run <script>`.
 
-| Script           | Description                              |
-| ---------------- | ---------------------------------------- |
-| `start:dev`      | Start with hot reload (watch mode)       |
-| `start:debug`    | Start with debugger attached             |
-| `start:prod`     | Run compiled production build            |
-| `build`          | Compile TypeScript to `dist/`            |
-| `lint`           | Run ESLint                               |
-| `lint:fix`       | Run ESLint with auto-fix                 |
-| `format`         | Format code with Prettier                |
-| `format:check`   | Check formatting without writing         |
-| `typecheck`      | Run TypeScript type checking             |
-| `test`           | Run unit tests                           |
-| `test:watch`     | Run tests in watch mode                  |
-| `test:cov`       | Run tests with coverage report           |
-| `test:e2e`       | Run end-to-end tests                     |
-| `db:generate`    | Generate Drizzle migration files         |
-| `db:migrate`     | Run Drizzle migrations                   |
-| `db:push`        | Push schema changes directly (dev only)  |
-| `db:studio`      | Open Drizzle Studio GUI                  |
-| `audit`          | Run security audit on dependencies       |
-| `deps:check`     | Check for outdated dependencies          |
+| Script         | Description                             |
+| -------------- | --------------------------------------- |
+| `start:dev`    | Start with hot reload (watch mode)      |
+| `start:debug`  | Start with debugger attached            |
+| `start:prod`   | Run compiled production build           |
+| `build`        | Compile TypeScript to `dist/`           |
+| `lint`         | Run type-aware Oxlint                   |
+| `lint:fix`     | Run Oxlint with auto-fix                |
+| `format`       | Format code with Prettier               |
+| `format:check` | Check formatting without writing        |
+| `typecheck`    | Run TypeScript type checking            |
+| `test`         | Run unit tests                          |
+| `test:watch`   | Run tests in watch mode                 |
+| `test:cov`     | Run tests with coverage report          |
+| `test:e2e`     | Run end-to-end tests                    |
+| `db:generate`  | Generate Drizzle migration files        |
+| `db:migrate`   | Run Drizzle migrations                  |
+| `db:push`      | Push schema changes directly (dev only) |
+| `db:studio`    | Open Drizzle Studio GUI                 |
+| `audit`        | Run security audit on dependencies      |
+| `deps:check`   | Check for outdated dependencies         |
 
 Root-level convenience scripts:
 
-| Script      | Description                                  |
-| ----------- | -------------------------------------------- |
-| `dev`       | Start full dev stack via Docker Compose       |
-| `dev:down`  | Tear down dev Docker Compose stack            |
+| Script     | Description                             |
+| ---------- | --------------------------------------- |
+| `dev`      | Start full dev stack via Docker Compose |
+| `dev:down` | Tear down dev Docker Compose stack      |
 
 ---
 
 ## Environment Variables
 
-| Variable               | Description                                          | Required                    |
-| ---------------------- | ---------------------------------------------------- | --------------------------- |
-| `PORT`                 | Server port                                          | Yes                         |
-| `NODE_ENV`             | Environment (`development`, `production`)             | Yes                         |
-| `DB_PROVIDER`          | Database backend (`postgres` or `mongo`)              | Yes (default: `postgres`)   |
-| `POSTGRES_URI`         | PostgreSQL connection string                          | When `DB_PROVIDER=postgres` |
-| `MONGO_URI`            | MongoDB connection string                             | When `DB_PROVIDER=mongo`    |
-| `JWT_SECRET`           | Access token signing key (min 32 characters)          | Yes                         |
-| `JWT_REFRESH_SECRET`   | Refresh token signing key (min 32 characters)         | Yes                         |
-| `ENCRYPTION_KEY_BASE64`| AES-256 key for encryption at rest (base64, 32 bytes) | Yes                         |
-| `ALLOWED_ORIGINS`      | Comma-separated CORS origins                          | No                          |
-| `TRUST_PROXY`          | Proxy hop count or trusted IPs for `X-Forwarded-*`    | No                          |
+| Variable                | Description                                           | Required                    |
+| ----------------------- | ----------------------------------------------------- | --------------------------- |
+| `PORT`                  | Server port                                           | Yes                         |
+| `NODE_ENV`              | Environment (`development`, `production`)             | Yes                         |
+| `DB_PROVIDER`           | Database backend (`postgres` or `mongo`)              | Yes (default: `postgres`)   |
+| `POSTGRES_URI`          | PostgreSQL connection string                          | When `DB_PROVIDER=postgres` |
+| `MONGO_URI`             | MongoDB connection string                             | When `DB_PROVIDER=mongo`    |
+| `JWT_SECRET`            | Access token signing key (min 32 characters)          | Yes                         |
+| `JWT_REFRESH_SECRET`    | Refresh token signing key (min 32 characters)         | Yes                         |
+| `ENCRYPTION_KEY_BASE64` | AES-256 key for encryption at rest (base64, 32 bytes) | Yes                         |
+| `ALLOWED_ORIGINS`       | Comma-separated CORS origins                          | No                          |
+| `TRUST_PROXY`           | Proxy hop count or trusted IPs for `X-Forwarded-*`    | No                          |
 
 ---
 
